@@ -1,14 +1,10 @@
 .container {
     position: relative;
     height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
 }
 
-.left {
+.main {
     position: relative;
-    width: 50%;
     height: 100%;
     flex-shrink: 0;
 }
@@ -29,6 +25,7 @@
 .text {
     background-color: #ccf6ff;
     border-radius: 12px;
+    width: 100%;
     padding: 1rem;
     margin: 0;
 }
@@ -41,16 +38,13 @@
     position: fixed;
     left: 0;
     bottom: 0;
-    width: 50%;
+    width: 100%;
     z-index: 5;
 }
 .input {
     margin: 1rem 1rem 3rem 1rem;
 }
 
-.right {
-    position: relative;
-    width: 50%;
-    height: 100%;
-    flex-shrink: 0;
+.loader {
+    padding: 1rem 0;
 }

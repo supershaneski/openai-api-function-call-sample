@@ -63,32 +63,27 @@ export async function textCompletion({
 }
 
 export async function chatCompletion({
-    model = 'gpt-3.5-turbo',
+    model = 'gpt-3.5-turbo-0613',
     max_tokens = 1024,
     temperature = 0,
     messages,
-    //prompt,
-    //question,
+    functions,
 }) {
     try {
-
-        /*const messages = [
-            { role: 'system', content: prompt },
-            { role: 'user', content: question }
-        ]*/
 
         const result = await openai.createChatCompletion({
             messages,
             model,
             max_tokens,
             temperature,
+            functions,
         })
 
         if (!result.data.choices[0].message) {
             throw new Error("No return error from chat");
         }
 
-        return result.data.choices[0].message?.content
+        return result.data.choices[0].message //?.content
 
     } catch(error) {
         console.log(error)

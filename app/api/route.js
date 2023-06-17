@@ -12,12 +12,11 @@ export async function POST(request) {
         })
     }
 
-    // Allow no inquiry: used in the beginning of Discussion
-    /*if (!inquiry) {
+    if (!inquiry) {
         return new Response('Bad question', {
             status: 400,
         })
-    }*/
+    }
 
     if (!Array.isArray(previous)) {
         return new Response('Bad chunks', {
@@ -46,24 +45,44 @@ export async function POST(request) {
 
     }
 
-    let text = ''
+    let result = {}
+
+    let messages = [
+        { role: 'system', content: system },
+    ]
+
+    messages = messages.concat(prev_data)
+    
+    messages.push({ role: 'user', content: inquiry })
 
     try {
-
-        let messages = [
-            { role: 'system', content: system },
-        ]
-
-        messages = messages.concat(prev_data)
         
-        if(inquiry.length > 0) {
-            messages.push({ role: 'user', content: inquiry })
-        }
-
-        text = await chatCompletion({
+        result = await chatCompletion({
             messages,
-            temperature: 0.7,
+            //temperature: 0.7,
+            functions: [
+                {
+                    "name": "get_product_price",
+                    "description": "Get the product price given the product and quantity",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {
+                        "product": {
+                          "type": "string",
+                          "description": "The product name, e.g. Campbell's soup"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "description": "The quantity, e.g. 1, 5, 37, 129"
+                        }
+                      },
+                      "required": ["product"]
+                    }
+                }
+            ]
         })
+
+        console.log(result)
 
     } catch(error) {
 
@@ -71,50 +90,56 @@ export async function POST(request) {
 
     }
 
-    /*
-    const image_list = [
-        ["sapporo clock tower", "odori park", "", "maruyama zoo", "", "jr tower sapporo", "ramen alley"],
-        ["mt. maruyama", "beer factory", "maruyama park", "sapporo factory", "susukino", "snow festival", "ramen alley"],
-        ["sapporo tv tower", "hokkaido shrine", "lilac festival", "", "susukino", "jr tower sapporo", "beer festival"],
-        ["", "lilac festival", "", "maruyama zoo", "odori park", "shinsapporo", "ramen alley"],
-    ]
-    const chance = Math.round(image_list.length * Math.random())
+    if(result.content === null) { // I am assuming that this means there is function_call value
 
-    const trip_name = inquiry.length > 0 ? `My Trip Hokkaido: ${inquiry} ${Date.now()}` : `My Trip Hokkaido ${Date.now()}`
+        // function call return
+        messages.push(result) 
 
-    text = `itinerary-name: ${trip_name}\n` +
-        `[welcome-message]\n` +
-        `title: welcome message title\n` +
-        `content: welcome message text\n` +
-        `image: ${image_list[chance][0]}\n` +
-        `[itinerary]\n` +
-        `title: itinerary title 1\n` +
-        `content: itinerary message text\n` +
-        `image: ${image_list[chance][1]}\n` +
-        `[itinerary]\n` +
-        `title: itinerary title 2\n` +
-        `content: itinerary message text\n` +
-        `image: ${image_list[chance][2]}\n` +
-        `[itinerary]\n` +
-        `title: itinerary title 3\n` +
-        `content: itinerary message text\n` +
-        `image: ${image_list[chance][3]}\n` +
-        `[itinerary]\n` +
-        `title: itinerary title 4\n` +
-        `content: itinerary message text\n` +
-        `image: ${image_list[chance][4]}\n` +
-        `[itinerary]\n` +
-        `title: itinerary title 5\n` +
-        `content: itinerary message text\n` +
-        `image: ${image_list[chance][5]}\n` +
-        `[closing-message]\n` +
-        `title: closing message title\n` +
-        `content: closing message text\n` +
-        `image: ${image_list[chance][6]}`
-    */
+        // Call function API here
+        const price = 1 + Math.round(100 * Math.random())
+
+        console.log('price', price)
+
+        // function API return
+        messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify({ price })})
+
+        result = {} // reset
+
+        try {
+
+            result = await chatCompletion({
+                messages,
+                //temperature: 0.7,
+                functions: [
+                    {
+                        "name": "get_product_price",
+                        "description": "Get the product price given the product and quantity",
+                        "parameters": {
+                          "type": "object",
+                          "properties": {
+                            "product": {
+                              "type": "string",
+                              "description": "The product name, e.g. Campbell's soup"
+                            },
+                            "quantity": {
+                              "type": "integer",
+                              "description": "The quantity, e.g. 1, 5, 37, 129"
+                            }
+                          },
+                          "required": ["product"]
+                        }
+                    }
+                ]
+            })
+
+        } catch(error) {
+            console.log(error)
+        }
+
+    }
 
     return new Response(JSON.stringify({
-        text,
+        result,
     }), {
         status: 200,
     })
