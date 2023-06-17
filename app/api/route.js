@@ -52,14 +52,13 @@ export async function POST(request) {
     ]
 
     messages = messages.concat(prev_data)
-    
     messages.push({ role: 'user', content: inquiry })
 
     try {
         
         result = await chatCompletion({
             messages,
-            //temperature: 0.7,
+            temperature: 0.7,
             functions: [
                 {
                     "name": "get_product_price",
@@ -92,24 +91,25 @@ export async function POST(request) {
 
     if(result.content === null) { // I am assuming that this means there is function_call value
 
-        // function call return
+        // add function call return
         messages.push(result) 
 
-        // Call function API here
+        // Mock Call function API here
         const price = 1 + Math.round(100 * Math.random())
 
         console.log('price', price)
 
-        // function API return
+        // add function API return
         messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify({ price })})
 
-        result = {} // reset
+        
+        result = {} // we are reusing same variable
 
         try {
 
             result = await chatCompletion({
                 messages,
-                //temperature: 0.7,
+                temperature: 0.7,
                 functions: [
                     {
                         "name": "get_product_price",

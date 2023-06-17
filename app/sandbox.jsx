@@ -19,17 +19,11 @@ import OpenAiIcon from '../components/openailogo'
 import LoadingText from '../components/loadingtext'
 import Loader from '../components/loader'
 
-//import useDataStore from '../store/datastore'
-
 import { getUniqueId } from '../lib/utils'
 
 import classes from './sandbox.module.css'
 
 export default function Sandbox() {
-
-    //const data = useDataStore((state) => state.data)
-    //const addData = useDataStore((state) => state.add)
-    //const deleteData = useDataStore((state) => state.delete)
 
     const inputRef = React.useRef(null)
 
