@@ -45,6 +45,31 @@ export async function POST(request) {
 
     }
 
+    const functions = [
+        {
+            "name": "get_product_price",
+            "description": "Get the product price given the product and quantity",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "product": {
+                  "type": "string",
+                  "description": "The product name, e.g. Campbell's soup"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "The quantity, e.g. 1, 5, 37, 129"
+                },
+                "unit": {
+                    "type": "string",
+                    "description": "The unit, e.g. pcs, kg, bottle, bag, packs"
+                }
+              },
+              "required": ["product"]
+            }
+        }
+    ]
+
     let result = {}
 
     let messages = [
@@ -59,26 +84,7 @@ export async function POST(request) {
         result = await chatCompletion({
             messages,
             temperature: 0.7,
-            functions: [
-                {
-                    "name": "get_product_price",
-                    "description": "Get the product price given the product and quantity",
-                    "parameters": {
-                      "type": "object",
-                      "properties": {
-                        "product": {
-                          "type": "string",
-                          "description": "The product name, e.g. Campbell's soup"
-                        },
-                        "quantity": {
-                          "type": "integer",
-                          "description": "The quantity, e.g. 1, 5, 37, 129"
-                        }
-                      },
-                      "required": ["product"]
-                    }
-                }
-            ]
+            functions
         })
 
         console.log(result)
@@ -110,26 +116,7 @@ export async function POST(request) {
             result = await chatCompletion({
                 messages,
                 temperature: 0.7,
-                functions: [
-                    {
-                        "name": "get_product_price",
-                        "description": "Get the product price given the product and quantity",
-                        "parameters": {
-                          "type": "object",
-                          "properties": {
-                            "product": {
-                              "type": "string",
-                              "description": "The product name, e.g. Campbell's soup"
-                            },
-                            "quantity": {
-                              "type": "integer",
-                              "description": "The quantity, e.g. 1, 5, 37, 129"
-                            }
-                          },
-                          "required": ["product"]
-                        }
-                    }
-                ]
+                functions
             })
 
         } catch(error) {

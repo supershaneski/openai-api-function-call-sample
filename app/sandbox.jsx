@@ -2,7 +2,7 @@
 
 import React from 'react'
 
-import { createPortal } from 'react-dom'
+//import { createPortal } from 'react-dom'
 
 import NoSsr from '@mui/base/NoSsr'
 import Box from '@mui/material/Box'
@@ -17,7 +17,7 @@ import PersonIcon from '@mui/icons-material/AccountCircle'
 
 import OpenAiIcon from '../components/openailogo'
 import LoadingText from '../components/loadingtext'
-import Loader from '../components/loader'
+//import Loader from '../components/loader'
 
 import { getUniqueId } from '../lib/utils'
 
@@ -173,12 +173,6 @@ export default function Sandbox() {
                     </div>
                 </div>
             </div>
-            {
-                loading && createPortal(
-                    <Loader />,
-                    document.body
-                )
-            }
         </div>
     )
 }
