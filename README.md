@@ -99,11 +99,10 @@ let func_result = args.product.map((a) => {
 will result to:
 
 ```javascript
-{
-  role: 'function',
-  name: 'get_product_price',
-  content: '[{"name":"brown rice","price":4},{"name":"pork belly","price":4},{"name":"garlic","price":5},{"name":"vinegar","price":22},{"name":"soy sauce","price":50}]'
-}
+
+console.log(func_result)
+
+// '[{"name":"brown rice","price":4},{"name":"pork belly","price":4},{"name":"garlic","price":5},{"name":"vinegar","price":22},{"name":"soy sauce","price":50}]'
 ```
 
 From the given [sample in OpenAI's page](https://openai.com/blog/function-calling-and-other-api-updates),
