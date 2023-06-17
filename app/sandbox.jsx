@@ -95,6 +95,10 @@ export default function Sandbox() {
         
         setLoading(false)
 
+        setTimeout(() => {
+            inputRef.current.focus();
+        }, 100);
+
     }
 
     return (
