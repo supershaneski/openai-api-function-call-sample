@@ -50,6 +50,9 @@ The `function call` will pertain to getting the price for product `get_product_p
 }
 ```
 
+> Note: Updated array output based from [this post](https://community.openai.com/t/function-call-arrays-as-parameters/268008/2).
+
+
 A sample response if inquiry from the user invokes the function:
 
 ```javascript
