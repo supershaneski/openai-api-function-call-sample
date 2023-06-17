@@ -58,10 +58,15 @@ A sample response if inquiry from the user invokes the function:
   content: null,
   function_call: {
     name: 'get_product_price',
-    arguments: '{\n  "product": ["bread", "peanut butter"]\n}'
+    arguments: '{\n' +
+      '  "product": ["brown rice", "pork belly", "garlic", "vinegar", "soy sauce"],\n' +
+      '  "quantity": [2, 1, 3, 1, 1],\n' +
+      '  "unit": ["kg", "kg", "heads", "bottle", "bottle"]\n' +
+      '}'
   }
 }
 ```
+
 
 Otherwise, the response is like this:
 
@@ -78,9 +83,27 @@ From `/api/route.js`
 
 ```javascript
 // Mock Call function API here
-const price = 1 + Math.round(100 * Math.random())
+//const price = 1 + Math.round(100 * Math.random())
+//console.log('price', price)
 
-console.log('price', price)
+const args = JSON.parse(result.function_call.arguments) // supports array
+
+let func_result = args.product.map((a) => {
+  return {
+    name: a,
+    price: 1 + Math.round(100 * Math.random()) // just mock
+  }
+})
+```
+
+will result to:
+
+```javascript
+{
+  role: 'function',
+  name: 'get_product_price',
+  content: '[{"name":"brown rice","price":4},{"name":"pork belly","price":4},{"name":"garlic","price":5},{"name":"vinegar","price":22},{"name":"soy sauce","price":50}]'
+}
 ```
 
 From the given [sample in OpenAI's page](https://openai.com/blog/function-calling-and-other-api-updates),
@@ -103,7 +126,9 @@ messages.push({ role: 'user', content: inquiry })
 messages.push(result)
 
 // add function API return
-messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify({ price })})
+//messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify({ price })})
+
+messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify(func_result)})
 ```
 
 The expected result after this step is just simple response:
