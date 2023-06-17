@@ -53,16 +53,25 @@ export async function POST(request) {
               "type": "object",
               "properties": {
                 "product": {
-                  "type": "string",
-                  "description": "The product name, e.g. Campbell's soup"
+                  "type": "array",
+                  "description": "The product names, e.g. Campbell's soup",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 "quantity": {
-                  "type": "integer",
-                  "description": "The quantity, e.g. 1, 5, 37, 129"
+                  "type": "array",
+                  "description": "The quantity, e.g. 1, 5, 37, 129",
+                  "items": {
+                    "type": "integer"
+                  }
                 },
                 "unit": {
-                    "type": "string",
-                    "description": "The unit, e.g. pcs, kg, bottle, bag, packs"
+                    "type": "array",
+                    "description": "The unit, e.g. pcs, kg, bottle, bag, packs",
+                    "items": {
+                        "type": "string"
+                    }
                 }
               },
               "required": ["product"]
@@ -101,13 +110,23 @@ export async function POST(request) {
         messages.push(result) 
 
         // Mock Call function API here
-        const price = 1 + Math.round(100 * Math.random())
+        //const price = 1 + Math.round(100 * Math.random())
+        //console.log('price', price)
 
-        console.log('price', price)
+        const args = JSON.parse(result.function_call.arguments)
+
+        let func_result = args.product.map((a) => {
+            return {
+                name: a,
+                price: 1 + Math.round(100 * Math.random())
+            }
+        })
 
         // add function API return
-        messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify({ price })})
-
+        //messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify({ price })})
+        messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify(func_result)})
+        
+        console.log(messages)
         
         result = {} // we are reusing same variable
 
@@ -118,6 +137,8 @@ export async function POST(request) {
                 temperature: 0.7,
                 functions
             })
+
+            console.log(result)
 
         } catch(error) {
             console.log(error)
