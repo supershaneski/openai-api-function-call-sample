@@ -18,26 +18,35 @@ The `function call` will pertain to getting the price for product `get_product_p
 
 ```javascript
 {
-    "name": "get_product_price",
-    "description": "Get the product price given the product and quantity",
-    "parameters": {
-        "type": "object",
-        "properties": {
-        "product": {
-            "type": "string",
-            "description": "The product name, e.g. Campbell's soup"
-        },
-        "quantity": {
-            "type": "integer",
-            "description": "The quantity, e.g. 1, 5, 37, 129"
-        },
-        "unit": {
-            "type": "string",
-            "description": "The unit, e.g. pcs, kg, bottle, bag, packs"
+  "name": "get_product_price",
+  "description": "Get the product price given the product and quantity",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "product": {
+        "type": "array",
+        "description": "The product names, e.g. Campbell's soup",
+        "items": {
+          "type": "string"
         }
-        },
-        "required": ["product"]
-    }
+      },
+      "quantity": {
+        "type": "array",
+        "description": "The quantity, e.g. 1, 5, 37, 129",
+        "items": {
+          "type": "integer"
+        }
+      },
+      "unit": {
+          "type": "array",
+          "description": "The unit, e.g. pcs, kg, bottle, bag, packs",
+          "items": {
+              "type": "string"
+          }
+      }
+    },
+    "required": ["product"]
+  }
 }
 ```
 
@@ -49,7 +58,7 @@ A sample response if inquiry from the user invokes the function:
   content: null,
   function_call: {
     name: 'get_product_price',
-    arguments: '{\n  "product": "brown rice",\n  "quantity": 2,\n  "unit": "kg"\n}'
+    arguments: '{\n  "product": ["bread", "peanut butter"]\n}'
   }
 }
 ```
