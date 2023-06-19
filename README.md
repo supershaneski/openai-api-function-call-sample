@@ -5,11 +5,13 @@ A sample app to demonstrate the newly added [function calling capabilities](http
 
 This application is built using manual setup of Next.js 13.
 
+* Update 2023-06-19: [Added Multi-function calling](#mutiple-function-call)
+
 # Screenshot
 
 ![Screenshot](./docs/screenshot.png "Screenshot")
 
-# Function Call
+# Function Call 
 
 Following the sample given in the [announcement page](https://openai.com/blog/function-calling-and-other-api-updates),
 in this demo, we are simulating a **customer service chatbot for a supermarket**.
@@ -152,6 +154,78 @@ However, if it does contain `function call`, then we send everything back again 
 
 The question is, would it be better to just check for `function call` first, without sending `previous conversations` and `system prompt`? If it failed, we just have the penalty of calling for the `function definition`. Is this approach better?
 
+
+# Mutiple Function Call
+
+![Multi-function call](./docs/screenshot1.png "Multi-function call")
+
+> Please note that this is just a sample. There is probably better implementation out there to achieve multiple-function calling.
+
+
+See `api2/route.js` for reference.
+
+Function definition
+
+```javascript
+{
+  "name": "get_user_inquiry",
+  "description": "Get users inquiry",
+  "parameters": {
+      "type": "object",
+      "properties": {
+          "location": {
+              "type": "string",
+              "description": "The city and state, e.g. San Francisco, CA"
+          },
+          "date": {
+              "type": "string",
+              "description": "The date, e.g. 2023-06-19, today, tomorrow"
+          },
+          "operation": {
+              "type": "array",
+              "description": "Topic of inquiry, e.g. weather, event, hotels",
+              "enum": ["weather", "event", "hotels"],
+              "items": {
+                  "type": "string"
+              }
+          }
+      },
+      "required": ["location"]
+  }
+}
+```
+
+Sample response with multi-function
+
+```javascript
+{
+  role: 'assistant',
+  content: null,
+  function_call: {
+    name: 'get_user_inquiry',
+    arguments: '{\n' +
+      '  "location": "Tokyo",\n' +
+      '  "date": "tomorrow",\n' +
+      '  "operation": ["event", "weather"]\n' +
+      '}'
+  }
+}
+```
+
+Sample response with single-function
+
+```javascript
+{
+  role: 'assistant',
+  content: null,
+  function_call: {
+    name: 'get_user_inquiry',
+    arguments: '{\n  "location": "Tokyo",\n  "operation": ["hotels"]\n}'
+  }
+}
+```
+
+> **Known Bug**: If you ask for anything without specifying the `location`, it will default to `San Francisco, CA`.
 
 # Setup
 
