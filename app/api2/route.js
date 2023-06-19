@@ -104,7 +104,7 @@ export async function POST(request) {
     if(func_result === null) {
 
         // Let's call the API again now with history and system prompt
-        messages = []
+        messages = [{ role: 'system', content: system }]
         messages = messages.concat(prev_data)
         messages.push({ role: 'user', content: inquiry })
 
@@ -164,7 +164,7 @@ export async function POST(request) {
 
     // let's call the API again to put it all together
 
-    messages = []
+    messages = [{ role: 'system', content: system }]
     messages = messages.concat(prev_data)
     messages.push({ role: 'user', content: inquiry })
     messages.push(func_result)
