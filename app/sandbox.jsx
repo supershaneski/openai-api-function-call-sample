@@ -15,6 +15,10 @@ import SettingsIcon from '@mui/icons-material/Settings'
 //import DeleteIcon from '@mui/icons-material/DeleteForever'
 import PersonIcon from '@mui/icons-material/AccountCircle'
 
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+
 import OpenAiIcon from '../components/openailogo'
 import LoadingText from '../components/loadingtext'
 //import Loader from '../components/loader'
@@ -23,6 +27,11 @@ import { getUniqueId } from '../lib/utils'
 
 import classes from './sandbox.module.css'
 
+const FunctionTypes = [
+    { name: 'Price Of Array Of Products', description: 'e.g. What is price of banana, apple and orange?' },
+    { name: 'Multiple function call', description: 'e.g. What are the events happening in Sapporo today, what is the weather like, and any nearby hotels?' },
+]
+
 export default function Sandbox() {
 
     const inputRef = React.useRef(null)
@@ -30,6 +39,8 @@ export default function Sandbox() {
     const [loading, setLoading] = React.useState(false)
     const [inputText, setInputText] = React.useState('')
     const [messageItems, setMessageItems] = React.useState([])
+
+    const [funcType, setFuncType] = React.useState(0)
     
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -39,6 +50,8 @@ export default function Sandbox() {
         const text = inputText
 
         setInputText('')
+
+        inputRef.current.blur()
 
         const previous = messageItems.map((item) => {
             return {
@@ -56,13 +69,30 @@ export default function Sandbox() {
 
         setMessageItems((prev) => [...prev, ...[newData]])
 
-        const system = `You are a helpful customer service rep.\n` +
+        let system = ''
+        let url = ''
+
+        if(funcType === 1) {
+
+            system = `You are a helpful event organizer rep.\n` +
+            `You will assist the user with their requests and inquiries.\n` +
+            `Always start the conversation with polite greeting: Welcome to Events Unlimited.`
+
+            url = '/api2/'
+
+        } else {
+
+            system = `You are a helpful customer service rep.\n` +
             `You will assist the user with their requests and inquiries.\n` +
             `Always start the conversation with polite greeting: Welcome to Super Supermarket.`
 
+            url = '/api/'
+
+        }
+
         try {
             
-            const response_chat = await fetch('/api/', {
+            const response_chat = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -81,13 +111,17 @@ export default function Sandbox() {
 
             const result = result_chat.result
 
-            const replyData = {
-                ...result,
-                id: getUniqueId(),
-                datetime: (new Date()).toISOString(),
+            if(Object.keys(result).length > 0) {
+
+                const replyData = {
+                    ...result,
+                    id: getUniqueId(),
+                    datetime: (new Date()).toISOString(),
+                }
+        
+                setMessageItems((prev) => [...prev, ...[replyData]])
+
             }
-    
-            setMessageItems((prev) => [...prev, ...[replyData]])
 
         } catch(error) {
             console.log(error)
@@ -96,14 +130,44 @@ export default function Sandbox() {
         setLoading(false)
 
         setTimeout(() => {
-            inputRef.current.focus();
+            inputRef.current.focus()
         }, 100);
+
+    }
+
+    const handleChangeFunction = (e) => {
+
+        setFuncType(e.target.value)
+        setMessageItems([])
 
     }
 
     return (
         <div className={classes.container}>
             <div className={classes.main}>
+                <div className={classes.header}>
+                    <FormControl fullWidth>
+                        <Select
+                        disabled={loading}
+                        value={funcType}
+                        onChange={handleChangeFunction}
+                        renderValue={(value) => (
+                            <React.Fragment>
+                                <span className={classes.name}>{FunctionTypes[value].name}</span>
+                                <span className={classes.desc}>{FunctionTypes[value].description}</span>
+                            </React.Fragment>
+                        )}
+                        >
+                            {
+                                FunctionTypes.map((item, index) => {
+                                    return (
+                                        <MenuItem key={index} value={index}>{ item.name }</MenuItem>
+                                    )
+                                })
+                            }
+                        </Select>
+                    </FormControl>
+                </div>
                 <div className={classes.messages}>
                     {
                         messageItems.map((item) => {
