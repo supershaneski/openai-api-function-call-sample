@@ -5,7 +5,7 @@ A sample app to demonstrate the newly added [function calling capabilities](http
 
 This application is built using manual setup of Next.js 13.
 
-* Update 2023-06-19: [Added Multi-function calling](#mutiple-function-call)
+* Update 2023-06-19: [Added Multi-Function Calling](#mutiple-function-call)
 
 # Screenshot
 
@@ -225,7 +225,122 @@ Sample response with single-function
 }
 ```
 
-> **Known Bug**: If you ask for anything without specifying the `location`, it will default to `San Francisco, CA`.
+The Mock API return will be
+
+```javascript
+{
+  event: 'Summer Festival, Yoyogi Park, 13:00PM - 21:00PM',
+  weather: '25 degrees celsius Cloudy',
+  location: 'Tokyo',
+  date: 'tomorrow'
+}
+```
+
+In the [OpenAI cookbook sample code](https://github.com/openai/openai-cookbook/blob/main/examples/How_to_call_functions_with_chat_models.ipynb), a `system prompt` is added to restrict the `function call` not to hallucinate when required parameters were not included. However, from my testing, I find not having such prompt seem better (of course, ymmv). To illustrate:
+
+User prompt:
+
+```
+I want to know any upcoming events in Sapporo this Friday.
+```
+
+> Note: I asked this question on Tuesday, 2023-06-20
+
+With `system prompt`:
+
+```javascript
+{
+  role: 'assistant',
+  content: null,
+  function_call: {
+    name: 'get_user_inquiry',
+    arguments: '{\n' +
+      '  "location": "Sapporo",\n' +
+      '  "date": "this friday",\n' + 
+      '  "operation": ["event"]\n' +
+      '}'
+  }
+}
+```
+
+Without `system prompt`:
+
+```javascript
+{
+  role: 'assistant',
+  content: null,
+  function_call: {
+    name: 'get_user_inquiry',
+    arguments: '{\n' +
+      '  "location": "Sapporo",\n' +
+      '  "date": "2023-06-23",\n' +
+      '  "operation": ["event"]\n' +
+      '}'
+  }
+}
+```
+
+> **Known Bug**: If you ask for anything without specifying the `location`, it might default to `San Francisco, CA`.
+
+## Persistent Parameters
+
+I am not adding chat history when I call the API for `function call` because of the cost and, from my testing, it does not seem to matter anyway.
+I wanted to add it if it works but as of now, does not seem to work as expected. Consider the following conversation flow:
+
+```
+User: What is happening in Sapporo tomorrow?
+
+ChatGPT: The Summer festival will begin tomorrow at Odori Park.
+
+User: How is the weather then?
+```
+
+Asking `How is the weather then?`, the function call will either hallucinate and give `San Francisco, CA` (the sample) or `then` or none at all.
+Either you handle it before sending to the API or the API handles it.
+
+One way to handle it in Next.js is using [cookie](https://nextjs.org/docs/app/api-reference/functions/cookies). Basically, we want to persist the parameters we get from previous function call for the context. I think this is better than adding the history in the messages.
+
+```javascript
+const cookieStore = cookies()
+
+const session_var = cookieStore.get('session-var')
+const sessions = typeof session_var !== 'undefined' ? JSON.parse(session_var.value) : {}
+
+const default_location = Object.keys(sessions).length > 0 ? sessions.location : ''
+const default_date = Object.keys(sessions).length > 0 ? sessions.date : ''
+
+...
+
+// Update the session variable
+cookieStore.set('session-var', JSON.stringify({
+    location,
+    date,
+}))
+```
+
+I will use `default_location` and `default_date` when function call returns missing parameters or unexpected values.
+
+```javascript
+let location = (func_args.hasOwnProperty('location') && func_args.location.length > 0) ? func_args.location : default_location
+
+location = location === 'nearby' || location === 'current' ?  default_location : location
+
+let date = (func_args.hasOwnProperty('date') && func_args.date.length > 0) ? func_args.date : default_date
+```
+
+By doing this, we can now properly process the previous conversation:
+
+```
+User: What is happening in Sapporo tomorrow?
+
+ChatGPT: The Summer festival will begin tomorrow at Odori Park.
+
+User: How is the weather then?
+
+ChatGPT: The weather will be Sunny tomorrow in Sapporo.
+```
+
+
 
 # Setup
 
