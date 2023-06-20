@@ -42,6 +42,7 @@ export default function Sandbox() {
 
     const [funcType, setFuncType] = React.useState(0)
     
+
     const handleSubmit = async (e) => {
         e.preventDefault()
 
@@ -207,6 +208,7 @@ export default function Sandbox() {
                             onSubmit={handleSubmit}
                             noValidate>
                                 <TextField 
+                                autoFocus={true}
                                 placeholder={`Write your inquiry`}
                                 disabled={loading}
                                 fullWidth

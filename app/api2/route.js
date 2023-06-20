@@ -1,5 +1,5 @@
+import { cookies } from 'next/headers'
 import { chatCompletion } from '../../service/openai'
-
 import { isEven } from '../../lib/utils'
 
 export async function POST(request) {
@@ -23,6 +23,11 @@ export async function POST(request) {
             status: 400,
         })
     }
+
+    /*const cookieStore = cookies()
+    const test = cookieStore.get('test')
+
+    console.log("test1", test)*/
 
     let prev_data = previous
 
@@ -57,11 +62,11 @@ export async function POST(request) {
                 "properties": {
                     "location": {
                         "type": "string",
-                        "description": "The city and state, e.g. San Francisco, CA"
+                        "description": "The location or place"
                     },
                     "date": {
                         "type": "string",
-                        "description": "The date, e.g. 2023-06-19, today, tomorrow"
+                        "description": "The date or day, e.g. 2023-06-19, today, tomorrow"
                     },
                     "operation": {
                         "type": "array",
@@ -72,16 +77,26 @@ export async function POST(request) {
                         }
                     }
                 },
-                "required": ["location"]
+                "required": ["location", "date"]
             }
         }
     ]
 
     let result = {}
 
-    let messages = []
     let func_result = null
 
+    // Add a system prompt to prevent hallucination
+    // Reference: https://github.com/openai/openai-cookbook/blob/main/examples/How_to_call_functions_with_chat_models.ipynb
+    /*let messages = [
+        { 
+            role: 'system',
+            content: 'Do not make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous like there is no location or date provided.'
+        }
+    ]*/
+
+    let messages = []
+    
     // First, call the API for function call with only the inquiry
     messages.push({ role: 'user', content: inquiry })
 
@@ -130,26 +145,49 @@ export async function POST(request) {
 
     console.log(func_result)
 
+    // Get stored session variable
+    const cookieStore = cookies()
+    const session_var = cookieStore.get('session-var')
+    const sessions = typeof session_var !== 'undefined' ? JSON.parse(session_var.value) : {}
+
+    console.log(sessions)
+
+    const default_location = Object.keys(sessions).length > 0 ? sessions.location : ''
+    const default_date = Object.keys(sessions).length > 0 ? sessions.date : ''
+    
     // If there is function call, let us check which operation is required by the user
     const func_args = JSON.parse(func_result.function_call.arguments)
 
-    const location = func_args.hasOwnProperty('location') ? func_args.location : ''
-    const date = func_args.hasOwnProperty('date') ? func_args.date : ''
-    const operation = func_args.hasOwnProperty('operation') ? func_args.operation : ['event']
+    let location = (func_args.hasOwnProperty('location') && func_args.location.length > 0) ? func_args.location : default_location
 
+    // This is to handle user prompts when exact location is not included but just implied.
+    location = location === 'nearby' || location === 'current' ?  default_location : location
+
+    let date = (func_args.hasOwnProperty('date') && func_args.date.length > 0) ? func_args.date : default_date
+
+    const operation = func_args.hasOwnProperty('operation') ? func_args.operation : ['event']
+    
+    // Update the session variable
+    cookieStore.set('session-var', JSON.stringify({
+        location,
+        date,
+    }))
+
+    // Mock API
     let data = {}
 
     for(let i = 0; i < operation.length; i++) {
 
         if(operation[i] === 'weather') {
             const temperature = 10 + Math.round(25 * Math.random())
-            data['weather'] = `${temperature} degrees celsius Sunny`
+            const chance = Math.round(10 * Math.random())
+            data['weather'] = `${temperature} degrees celsius ${chance > 5 ? 'Sunny' : 'Cloudy'}`
         } else if(operation[i] === 'hotels') {
             const chance = Math.round(10 * Math.random())
             data['hotels'] = chance > 5 ? 'Park Hotel, Dormy Inn' : 'Century Plaza, Hilton Hotel'
         } else {
             const chance = Math.round(10 * Math.random())
-            data['event'] = chance > 5 ? 'Summer Festival' : 'Fireworks Festival'
+            data['event'] = chance > 5 ? 'Summer Festival, Odori Park, 13:00PM - 21:00PM' : 'Fireworks Festival, Toyohira River, 7:00PM to 8:30PM'
         }
 
     }
