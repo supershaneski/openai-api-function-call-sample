@@ -125,7 +125,9 @@ export default function Sandbox() {
             }
 
         } catch(error) {
+
             console.log(error)
+
         }
         
         setLoading(false)
