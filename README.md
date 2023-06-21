@@ -341,6 +341,8 @@ ChatGPT: The weather will be Sunny tomorrow in Sapporo.
 ```
 
 
+![Persistent parameters](./docs/screenshot2.png "Persistent parameters")
+
 
 # Setup
 
