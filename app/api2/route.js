@@ -29,7 +29,7 @@ const functions = [
             "properties": {
                 "location": {
                     "type": "string",
-                    "description": "The city, place or any location, e.g. San Francisco, CA"
+                    "description": "The city, place or any location" //, e.g. San Francisco, CA"
                 },
                 "date": {
                     "type": "string",
@@ -52,7 +52,12 @@ const functions = [
 const callCompletion = async (messages, functions, temperature = 0) => {
 
     try {
-        const options = { messages, functions }
+        //const options = { messages, functions }
+        const options = { messages }
+        
+        if(functions) {
+            options.functions = functions
+        }
 
         if (temperature > 0) {
             options.temperature = temperature
@@ -85,79 +90,39 @@ const setMessages = (inquiry, previous, system) => {
 
 }
 
+const validateParameters = (args, deflocation, defdate) => {
+    
+    let location = (args.hasOwnProperty('location') && args.location.length > 0) ? args.location : deflocation
+    location = location === 'nearby' || location === 'current' || location === 'tomorrow' ?  deflocation : location
+    let date = (args.hasOwnProperty('date') && args.date.length > 0) ? args.date : defdate
+    let operation = args.hasOwnProperty('operation') ? args.operation : ['event']
+    
+    return {
+        location, 
+        date, 
+        operation
+    }
+}
+
+const setMessageResponse = (msg) => {
+    return new Response(JSON.stringify({
+        result: { role: 'assistant', content: msg },
+    }), {
+        status: 200,
+    })
+}
+
 export async function POST(request) {
 
     const { system, inquiry, previous } = await request.json()
-    
-    if (!system) {
+
+    if (!system || !inquiry || !Array.isArray(previous)) {
         return new Response('Bad system prompt', {
             status: 400,
         })
     }
 
-    if (!inquiry) {
-        return new Response('Bad inquiry', {
-            status: 400,
-        })
-    }
-
-    if (!Array.isArray(previous)) {
-        return new Response('Bad chunks', {
-            status: 400,
-        })
-    }
-
-
-    // a simplistic way to limit history
     let prev_data = trim_array(previous, 20)
-    
-    // func call
-    let messages = setMessages(inquiry, null, 'Make sure that extracted parameters are valid according to the description.')
-    let response = await callCompletion(messages, functions)
-
-    if(!response) {
-        
-        return new Response(JSON.stringify({
-            result: {
-                role: 'assistant',
-                content: 'Unexpected error. Can you please submit it again?'
-            },
-        }), {
-            status: 200,
-        })
-
-    }
-
-    if(response.content !== null) {
-
-        // chat completion
-        messages = setMessages(inquiry, prev_data, system)
-        response = await callCompletion(messages, functions, 0.7)
-
-        if(!response) {
-            
-            return new Response(JSON.stringify({
-                result: {
-                    role: 'assistant',
-                    content: 'Unexpected error. Can you please submit it again?'
-                },
-            }), {
-                status: 200,
-            })
-
-        }
-
-        if(response.content !== null) {
-
-            return new Response(JSON.stringify({
-                result: response,
-            }), {
-                status: 200,
-            })
-
-        }
-
-    }
 
     // get stored parameters
     const cookieStore = cookies()
@@ -167,122 +132,113 @@ export async function POST(request) {
     const default_location = Object.keys(sessions).length > 0 ? sessions.location : ''
     const default_date = Object.keys(sessions).length > 0 ? sessions.date : ''
 
-    let func_result = response
-    let func_args = JSON.parse(func_result.function_call.arguments)
-
-    // validate parameters
-    let location = (func_args.hasOwnProperty('location') && func_args.location.length > 0) ? func_args.location : default_location
-    location = location === 'nearby' || location === 'current' ?  default_location : location
-    let date = (func_args.hasOwnProperty('date') && func_args.date.length > 0) ? func_args.date : default_date
-    let operation = func_args.hasOwnProperty('operation') ? func_args.operation : ['event']
-    
-    // update stored parameters
-    cookieStore.set('session-var', JSON.stringify({
-        location,
-        date,
-    }))
-    
-    // mock api call
-    let data = callMockAPI({ location, date, operation })
-
-    let mock_api_result = {
-        ...data,
-        location,
-        date
-    }
-
-    // chat completion
-    messages = setMessages(inquiry, prev_data, system)
-    messages.push(func_result)
-    messages.push({ role: "function", name: "get_user_inquiry", content: JSON.stringify(mock_api_result)})
-
-    response = await callCompletion(messages, functions, 0.7)
+    // First, API call
+    let messages = setMessages(inquiry, null, 'Make sure that extracted parameters are valid according to the description.')
+    let response = await callCompletion(messages, functions)
 
     if(!response) {
-
-        return new Response(JSON.stringify({
-            result: {
-                role: 'assistant',
-                content: 'Unexpected error. Can you please submit it again?'
-            },
-        }), {
-            status: 200,
-        })
-
+        return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
     }
 
-    if(response.content !== null) {
-
-        return new Response(JSON.stringify({
-            result: response,
-        }), {
-            status: 200,
-        })
-
-    }
-
-    // there is a chance that a func call will be returned
-
-    func_result = response
-    func_args = JSON.parse(func_result.function_call.arguments)
-
-    // validate parameters
-    location = (func_args.hasOwnProperty('location') && func_args.location.length > 0) ? func_args.location : default_location
-    location = location === 'nearby' || location === 'current' ?  default_location : location
-    date = (func_args.hasOwnProperty('date') && func_args.date.length > 0) ? func_args.date : default_date
-    operation = func_args.hasOwnProperty('operation') ? func_args.operation : ['event']
+    let error_flag = false
+    //let response_flag = false
+    let iterate_count = 0
+    let max_iterate_count = 3 // prevents infinite loop
     
-    // update stored parameters
-    cookieStore.set('session-var', JSON.stringify({
-        location,
-        date,
-    }))
+    let func_result = null
+    let mock_api_result = null
+
+    do {
+
+        console.log('loop', iterate_count)
+
+        if (response.content !== null) {
+
+            console.log('summarize')
+
+            messages = setMessages(inquiry, prev_data, system)
+            
+            response = await callCompletion(messages, functions, 0.7)
+
+            if(!response) {
+
+                error_flag = true
+
+                return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
+            
+            }
+
+            if(response.content !== null) {
+
+                return new Response(JSON.stringify({
+                    result: response,
+                }), {
+                    status: 200,
+                })
+
+            }
+
+            // It is possible that the response here will be function call.
+            // In that case, we will process it once more.
+
+        } else {
+
+            console.log("function call", response)
+
+            func_result = response
+
+            let func_args = JSON.parse(func_result.function_call.arguments)
+
+            const { location, date, operation } = validateParameters(func_args, default_location, default_date)
+            
+            cookieStore.set('session-var', JSON.stringify({
+                location,
+                date,
+            }))
     
-    // mock api call
-    data = callMockAPI({ location, date, operation })
+            let data = callMockAPI({ location, date, operation })
 
-    mock_api_result = {
-        ...data,
-        location,
-        date
-    }
+            mock_api_result = {
+                ...data,
+                location,
+                date
+            }
 
-    // chat completion
-    messages = setMessages(inquiry, prev_data, system)
-    messages.push(func_result)
-    messages.push({ role: "function", name: "get_user_inquiry", content: JSON.stringify(mock_api_result)})
+            console.log('mock api result', mock_api_result)
 
-    response = await callCompletion(messages, functions, 0.7)
+            messages = setMessages(inquiry, prev_data, system)
+            messages.push(func_result)
+            messages.push({ role: "function", name: "get_user_inquiry", content: JSON.stringify(mock_api_result)})
+            
+            response = await callCompletion(messages, functions, 0.7)
 
-    if(!response) {
-        return new Response(JSON.stringify({
-            result: {
-                role: 'assistant',
-                content: 'Unexpected error. Can you please submit it again?'
-            },
-        }), {
-            status: 200,
-        })
-    }
+            if(!response) {
 
-    if(response.content !== null) {
+                error_flag = true
 
-        return new Response(JSON.stringify({
-            result: response,
-        }), {
-            status: 200,
-        })
+                return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
+            
+            }
 
-    }
+            if(response.content !== null) {
+
+                return new Response(JSON.stringify({
+                    result: response,
+                }), {
+                    status: 200,
+                })
+
+            }
+
+            // It is possible that the response here will be function call.
+            // In that case, we will process it once more.
+
+        }
+
+        iterate_count++
+
+    } while(!error_flag && !error_flag && iterate_count < max_iterate_count)
+
+    return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
     
-    // even if a func call is returned, let's quit and show error
-    return new Response(JSON.stringify({
-        result: {
-            role: 'assistant',
-            content: 'I am having trouble processing your inquiry. Can you please submit it again?'
-        },
-    }), {
-        status: 200,
-    })
-
 }
