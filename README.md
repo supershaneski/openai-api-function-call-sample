@@ -347,7 +347,21 @@ User: How is the weather then?
 ChatGPT: Tomorrow in Sapporo, the weather is expected to be sunny with a temperature of around 23 degrees Celsius. It should be a pleasant day to enjoy outdoor events like the Summer Festival.
 ```
 
-Here is another sample conversation:
+In case, the parameters are missing or invalid and there is no applicable stored parameters, we can just send an `error response`.
+
+```javscript
+{
+  role: 'assistant',
+  content: null,
+  function_call: {
+    name: 'get_user_inquiry',
+    arguments: '{\n  "error": "Invalid parameters"\n}'
+  }
+}
+```
+
+The Chat Completions API will be able to process this and send back a clarifying response.
+Refer to the sample conversation below.
 
 ![Persistent parameters](./docs/screenshot2.png "Persistent parameters")
 
