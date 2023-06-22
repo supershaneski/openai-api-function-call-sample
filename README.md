@@ -7,7 +7,7 @@ This application is built using manual setup of Next.js 13.
 
 ---
 
-OpenAI Chat Completions APIで新たに追加された関数呼び出し機能を示すサンプルアプリ。
+OpenAI Chat Completions APIで新たに追加された「ファンクションコール」機能を示すサンプルアプリ。
 
 **Updates:**
 
