@@ -3,6 +3,10 @@ import { chatCompletion } from '../../service/openai'
 import { isEven } from '../../lib/utils'
 import { callMockAPI } from '../../lib/mockapi'
 
+/**
+ * A very simplistic way to maintain history and not reach max token.
+ * We just set the maximum allowed entries into max_length.
+ */
 const trim_array = ( arr, max_length = 20 ) => {
 
     let new_arr = arr
@@ -20,6 +24,9 @@ const trim_array = ( arr, max_length = 20 ) => {
 
 }
 
+/**
+ * Sample mutiple function that share the same parameters.
+ */
 const functions = [
     {
         "name": "get_user_inquiry",
@@ -90,6 +97,13 @@ const setMessages = (inquiry, previous, system) => {
 
 }
 
+/**
+ * Validating the parameters received from function call.
+ * Using the saved parameters (deflocation, defdate) in some cases.
+ * You will probably need to customize a similar function for your own purpose.
+ * This is just the first step to ensure that we are sending valid parameters
+ * to the external API.
+ */
 const validateParameters = (args, deflocation, defdate) => {
     
     let location = (args.hasOwnProperty('location') && args.location.length > 0) ? args.location : deflocation
@@ -122,6 +136,7 @@ export async function POST(request) {
         })
     }
 
+    // Limit chat history
     let prev_data = trim_array(previous, 20)
 
     // get stored parameters
@@ -132,7 +147,7 @@ export async function POST(request) {
     const default_location = Object.keys(sessions).length > 0 ? sessions.location : ''
     const default_date = Object.keys(sessions).length > 0 ? sessions.date : ''
 
-    // First, API call
+    // Step 1. Call API to check for function call
     let messages = setMessages(inquiry, null, 'Make sure that extracted parameters are valid according to the description.')
     let response = await callCompletion(messages, functions)
 
@@ -141,24 +156,30 @@ export async function POST(request) {
     }
 
     let error_flag = false
-    //let response_flag = false
     let iterate_count = 0
     let max_iterate_count = 3 // prevents infinite loop
     
     let func_result = null
     let mock_api_result = null
 
+    // We will process the result using loop
     do {
 
         console.log('loop', iterate_count)
 
+        // Response has no function call
         if (response.content !== null) {
 
-            console.log('summarize')
+            console.log('plain response')
 
+            // Step 2. If Step 1 returns no function call, we will call the API again
+            // with chat history and main system prompt.
             messages = setMessages(inquiry, prev_data, system)
             
-            response = await callCompletion(messages, functions, 0.7)
+            // Remove functions in API call, I think it causes redundant function call response
+            //response = await callCompletion(messages, functions, 0.7)
+
+            response = await callCompletion(messages, null, 0.7)
 
             if(!response) {
 
@@ -168,6 +189,9 @@ export async function POST(request) {
             
             }
 
+            console.log('plain call result', response)
+
+            // This is the expected response
             if(response.content !== null) {
 
                 return new Response(JSON.stringify({
@@ -178,24 +202,32 @@ export async function POST(request) {
 
             }
 
-            // It is possible that the response here will be function call.
-            // In that case, we will process it once more.
+            // However, it is possible to get function call response here.
+            // So we just sent it back the loop for processing.
+            
 
+        // Response has function call 
         } else {
 
             console.log("function call", response)
 
+            // When we receive function call response, we validate the parameters.
             func_result = response
 
             let func_args = JSON.parse(func_result.function_call.arguments)
 
+            console.log('stored parameters', default_location, default_date)
+
             const { location, date, operation } = validateParameters(func_args, default_location, default_date)
             
+            // I am saving the parameters in the cookie
+            // in case, next function call has few missing parameters
             cookieStore.set('session-var', JSON.stringify({
                 location,
                 date,
             }))
     
+            // Call Mock API
             let data = callMockAPI({ location, date, operation })
 
             mock_api_result = {
@@ -206,6 +238,10 @@ export async function POST(request) {
 
             console.log('mock api result', mock_api_result)
 
+            // Step 3. We now put everything into final API call to summarize
+            // In some cases, ChatGPT will decide that the function call/API result is wrong based from the
+            // context of overall conversation which the function call API misses, it will return
+            // another function call.
             messages = setMessages(inquiry, prev_data, system)
             messages.push(func_result)
             messages.push({ role: "function", name: "get_user_inquiry", content: JSON.stringify(mock_api_result)})
@@ -220,6 +256,9 @@ export async function POST(request) {
             
             }
 
+            console.log('summarize call result', response)
+
+            // This is the expected response
             if(response.content !== null) {
 
                 return new Response(JSON.stringify({
@@ -230,11 +269,12 @@ export async function POST(request) {
 
             }
 
-            // It is possible that the response here will be function call.
-            // In that case, we will process it once more.
+            // However, it is possible to get function call response here.
+            // So we just sent it back the loop for processing.
 
         }
 
+        // max_iterate_count will prevent infinite loop 
         iterate_count++
 
     } while(!error_flag && !error_flag && iterate_count < max_iterate_count)
