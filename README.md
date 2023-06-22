@@ -175,7 +175,7 @@ Function definition
       "properties": {
           "location": {
               "type": "string",
-              "description": "The city and state, e.g. San Francisco, CA"
+              "description": "The city, place or any location" //, e.g. San Francisco, CA - removing to prevent hallucination
           },
           "date": {
               "type": "string",
@@ -190,7 +190,7 @@ Function definition
               }
           }
       },
-      "required": ["location"]
+      "required": ["location", "date"]
   }
 }
 ```
@@ -284,8 +284,7 @@ Without `system prompt`:
 
 ## Persistent Parameters
 
-I am not adding chat history when I call the API for `function call` because of the cost and, from my testing, it does not seem to matter anyway.
-I wanted to add it if it works but as of now, does not seem to work as expected. Consider the following conversation flow:
+Consider this conversation,
 
 ```
 User: What is happening in Sapporo tomorrow?
@@ -295,40 +294,42 @@ ChatGPT: The Summer festival will begin tomorrow at Odori Park.
 User: How is the weather then?
 ```
 
-Asking `How is the weather then?`, the function call will either hallucinate and give `San Francisco, CA` (the sample) or `then` or none at all.
-Either you handle it before sending to the API or the API handles it.
+A possible `function call` response will be,
 
-One way to handle it in Next.js is using [cookie](https://nextjs.org/docs/app/api-reference/functions/cookies). Basically, we want to persist the parameters we get from previous function call for the context. I think this is better than adding the history in the messages.
+```javascript
+{
+  role: 'assistant',
+  content: null,
+  function_call: {
+    name: 'get_user_inquiry',
+    arguments: '{\n  "location": "here",\n  "date": "today",\n  "operation": ["weather"]\n}'
+  }
+}
+```
+
+Depending on how you phrase the last inquiry, you'll either get a similar result above with wrong parameters, blank parameters or worst, `San Francisco, CA`, the sample we gave in the description.
+
+One way to handle this is to store the previous parameters we received in some session variables.
+In Next.js, I will be using [cookie](https://nextjs.org/docs/app/api-reference/functions/cookies).
 
 ```javascript
 const cookieStore = cookies()
 
+// retrieve stored parameters
 const session_var = cookieStore.get('session-var')
-const sessions = typeof session_var !== 'undefined' ? JSON.parse(session_var.value) : {}
-
-const default_location = Object.keys(sessions).length > 0 ? sessions.location : ''
-const default_date = Object.keys(sessions).length > 0 ? sessions.date : ''
 
 ...
 
-// Update the session variable
+// store the parameters
 cookieStore.set('session-var', JSON.stringify({
     location,
     date,
 }))
 ```
 
-I will use `default_location` and `default_date` when function call returns missing parameters or unexpected values.
+So before I send the parameters to the external API/function, I validate the parameters we received from function call and substitute the values from the stored parameters, if necessary.
 
-```javascript
-let location = (func_args.hasOwnProperty('location') && func_args.location.length > 0) ? func_args.location : default_location
-
-location = location === 'nearby' || location === 'current' ?  default_location : location
-
-let date = (func_args.hasOwnProperty('date') && func_args.date.length > 0) ? func_args.date : default_date
-```
-
-By doing this, we can now properly process the previous conversation:
+Now, when we try the conversation again,
 
 ```
 User: What is happening in Sapporo tomorrow?
@@ -337,9 +338,10 @@ ChatGPT: The Summer festival will begin tomorrow at Odori Park.
 
 User: How is the weather then?
 
-ChatGPT: The weather will be Sunny tomorrow in Sapporo.
+ChatGPT: Tomorrow in Sapporo, the weather is expected to be sunny with a temperature of around 23 degrees Celsius. It should be a pleasant day to enjoy outdoor events like the Summer Festival.
 ```
 
+Here is another sample conversation:
 
 ![Persistent parameters](./docs/screenshot2.png "Persistent parameters")
 
