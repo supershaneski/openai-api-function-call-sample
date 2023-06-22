@@ -5,7 +5,13 @@ A sample app to demonstrate the newly added [function calling capabilities](http
 
 This application is built using manual setup of Next.js 13.
 
-* Update 2023-06-19: [Added Multi-Function Calling](#mutiple-function-call)
+---
+
+OpenAI Chat Completions APIで新たに追加された関数呼び出し機能を示すサンプルアプリ。
+
+**Updates:**
+
+* 2023-06-19: [Added Multi-Function Calling](#mutiple-function-call)
 
 # Screenshot
 
