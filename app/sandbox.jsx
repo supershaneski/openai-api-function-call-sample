@@ -30,7 +30,7 @@ import classes from './sandbox.module.css'
 const FunctionTypes = [
     { name: 'Price Of Array Of Products', description: 'e.g. What is price of banana, apple and orange?' },
     { name: 'Multiple Function Call', description: 'e.g. What are the events happening in Sapporo today, what is the weather like, and any nearby hotels?' },
-    { name: 'Extract Structured Data From Text', description: 'Extract all actual people (name, birthday, location) mentioned in the text' },
+    { name: 'Extract Structured Data From Text', description: 'Extract all people (name, birthday, location) mentioned in the text' },
 ]
 
 export default function Sandbox() {
