@@ -11,6 +11,7 @@ OpenAI Chat Completions APIで新たに追加された「ファンクション�
 
 **Updates:**
 
+* 2023-06-23: [Added Extracting Structured Data](#extracting-structured-data-from-text)
 * 2023-06-19: [Added Multi-Function Calling](#mutiple-function-call)
 
 # Screenshot
@@ -365,6 +366,83 @@ Refer to the sample conversation below.
 
 ![Persistent parameters](./docs/screenshot2.png "Persistent parameters")
 
+
+# Extracting Structured Data From Text
+
+One of the use case of `Function Calling` is [extracting structured data from text](https://openai.com/blog/function-calling-and-other-api-updates).
+
+Using the function described in the OpenAI page `extract_people_data(people: [{name: string, birthday: string, location: string}])`, I write the definition:
+
+```javascript
+{
+  name: "extract_people_data",
+  description: "Extract all info related to people from the user's given text.",
+  parameters: {
+      type: "object",
+      properties: {
+          people: {
+              type: "array",
+              items: {
+                  type: "object",
+                  properties: {
+                      name: { type: "string" },
+                      birthday: { type: "string" },
+                      location: { type: "string" },
+                  }
+              }
+          }
+      },
+      required: ["people"]
+  }
+}
+```
+
+This function is supposed to be used for browsing Wikipedia but let us just use it to process the text submitted.
+
+For example, using this input text,
+
+```
+New Zealand prime minister Chris Hipkins has disagreed with US President Joe Biden’s remark that Xi Jinping is a “dictator”, as he prepares to meet the Chinese leader on an official trade trip to China.
+```
+
+We will get a response from `function call`,
+
+```javascript
+{
+  role: 'assistant',
+  content: null,
+  function_call: {
+    name: 'extract_people_data',
+    arguments: '{\n' +
+      '  "people": [\n' +
+      '    {\n' +
+      '      "name": "Chris Hipkins",\n' +
+      '      "birthday": "Unknown",\n' +
+      '      "location": "New Zealand"\n' +
+      '    },\n' +
+      '    {\n' +
+      '      "name": "Joe Biden",\n' +
+      '      "birthday": "November 20, 1942",\n' +
+      '      "location": "United States"\n' +
+      '    },\n' +
+      '    {\n' +
+      '      "name": "Xi Jinping",\n' +
+      '      "birthday": "June 15, 1953",\n' +
+      '      "location": "China"\n' +
+      '    }\n' +
+      '  ]\n' +
+      '}'
+  }
+}
+```
+
+The data for `birthday` and `location` is automatically filled since we have no `system prompt`. Depending on your use case, this behavior might be more desirable.
+
+
+As the sample shown below, it can extract people from any language.
+
+
+![Extracting Structured Data](./docs/screenshot3.png "Extracting Structured Data")
 
 # Setup
 

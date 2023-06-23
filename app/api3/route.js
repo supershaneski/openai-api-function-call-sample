@@ -32,9 +32,9 @@ const functions = [
                     items: {
                         type: "object",
                         properties: {
-                            name: { type: "string" },
-                            birthday: { type: "string" },
-                            location: { type: "string" },
+                            name: { type: "string", description: "Name of the person" },
+                            birthday: { type: "string", description: "Date of birth, e.g. 2010-01-20" },
+                            location: { type: "string", description: "Place, city or country" },
                         }
                     }
                 }
