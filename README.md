@@ -417,7 +417,7 @@ We will get a response from `function call`,
       '  "people": [\n' +
       '    {\n' +
       '      "name": "Chris Hipkins",\n' +
-      '      "birthday": "Unknown",\n' +
+      '      "birthday": "",\n' +
       '      "location": "New Zealand"\n' +
       '    },\n' +
       '    {\n' +
