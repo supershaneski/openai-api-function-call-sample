@@ -29,7 +29,8 @@ import classes from './sandbox.module.css'
 
 const FunctionTypes = [
     { name: 'Price Of Array Of Products', description: 'e.g. What is price of banana, apple and orange?' },
-    { name: 'Multiple function call', description: 'e.g. What are the events happening in Sapporo today, what is the weather like, and any nearby hotels?' },
+    { name: 'Multiple Function Call', description: 'e.g. What are the events happening in Sapporo today, what is the weather like, and any nearby hotels?' },
+    { name: 'Extract Structured Data From Text', description: 'Extract all actual people (name, birthday, location) mentioned in the text' },
 ]
 
 export default function Sandbox() {
@@ -73,7 +74,14 @@ export default function Sandbox() {
         let system = ''
         let url = ''
 
-        if(funcType === 1) {
+        if(funcType === 2) {
+
+            system = `You are a helpful assistant.\n` +
+            `Extract all info related to people from the user's given text.`
+
+            url = '/api3/'
+
+        } else if(funcType === 1) {
 
             system = `You are a helpful event organizer rep.\n` +
             `You will assist the user with their requests and inquiries.\n` +
