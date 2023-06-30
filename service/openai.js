@@ -12,6 +12,7 @@ export async function chatCompletion({
     temperature = 0,
     messages,
     functions,
+    function_call = 'auto',
 }) {
     try {
 
@@ -21,6 +22,7 @@ export async function chatCompletion({
             max_tokens,
             temperature,
             functions,
+            function_call,
         })
 
         if (!result.data.choices[0].message) {
