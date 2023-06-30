@@ -23,46 +23,37 @@ OpenAI Chat Completions APIで新たに追加された「ファンクション�
 Following the sample given in the [announcement page](https://openai.com/blog/function-calling-and-other-api-updates),
 in this demo, we are simulating a **customer service chatbot for a supermarket**.
 
-The `function call` will pertain to getting the price for product `get_product_price`:
+Here is the function definition for `get_product_price`:
 
 ```javascript
 {
-  "name": "get_product_price",
-  "description": "Get the product price given the product and quantity",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "product": {
-        "type": "array",
-        "description": "The product names, e.g. Campbell's soup",
-        "items": {
-          "type": "string"
-        }
-      },
-      "quantity": {
-        "type": "array",
-        "description": "The quantity, e.g. 1, 5, 37, 129",
-        "items": {
-          "type": "integer"
-        }
-      },
-      "unit": {
-          "type": "array",
-          "description": "The unit, e.g. pcs, kg, bottle, bag, packs",
-          "items": {
-              "type": "string"
+  name: 'get_product_price', 
+  description: 'Get prices of the given products and its quantities', 
+  parameters: {
+    type: 'object', 
+    properties: {
+      products: {
+        type: 'array', 
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Name of product, e.g. banana, apple, spinach" },
+            quantity: { type: "integer", description: "Quantity of product, e.g. 1, 2, 37" },
+            unit: { type: "string", description: "Unit of quantity, e.g. kg, pcs, bottle, bag, packs" }
           }
+        }
       }
-    },
-    "required": ["product"]
+    }, 
+    required: ['products']
   }
 }
 ```
 
-> Note: Updated array output based from [this post](https://community.openai.com/t/function-call-arrays-as-parameters/268008/2).
+Using this user inquiry:
 
+`"i want to know how much is 2kg of brown rice, 1kg of pork belly, 3 heads of garlic, a 250ml bottle of vinegar and a 250ml bottle of soy sauce. i'm planning to cook adobo for dinner today."`
 
-A sample response if inquiry from the user invokes the function:
+We will receive this sample response:
 
 ```javascript
 {
@@ -71,16 +62,58 @@ A sample response if inquiry from the user invokes the function:
   function_call: {
     name: 'get_product_price',
     arguments: '{\n' +
-      '  "product": ["brown rice", "pork belly", "garlic", "vinegar", "soy sauce"],\n' +
-      '  "quantity": [2, 1, 3, 1, 1],\n' +
-      '  "unit": ["kg", "kg", "heads", "bottle", "bottle"]\n' +
+      '  "products": [\n' +
+      '    {\n' +
+      '      "name": "brown rice",\n' +
+      '      "quantity": 2,\n' +
+      '      "unit": "kg"\n' +
+      '    },\n' +
+      '    {\n' +
+      '      "name": "pork belly",\n' +
+      '      "quantity": 1,\n' +
+      '      "unit": "kg"\n' +
+      '    },\n' +
+      '    {\n' +
+      '      "name": "garlic",\n' +
+      '      "quantity": 3,\n' +
+      '      "unit": "heads"\n' +
+      '    },\n' +
+      '    {\n' +
+      '      "name": "vinegar",\n' +
+      '      "quantity": 250,\n' +
+      '      "unit": "ml"\n' +
+      '    },\n' +
+      '    {\n' +
+      '      "name": "soy sauce",\n' +
+      '      "quantity": 250,\n' +
+      '      "unit": "ml"\n' +
+      '    }\n' +
+      '  ]\n' +
       '}'
   }
 }
 ```
 
+A mock up API result will be like this:
 
-Otherwise, the response is like this:
+```javascript
+[
+  { name: 'brown rice', quantity: 2, unit: 'kg', price: 91 },
+  { name: 'pork belly', quantity: 1, unit: 'kg', price: 81 },
+  { name: 'garlic', quantity: 3, unit: 'heads', price: 57 },
+  { name: 'vinegar', quantity: 250, unit: 'ml', price: 2 },
+  { name: 'soy sauce', quantity: 250, unit: 'ml', price: 13 }
+]
+```
+
+Then put all together in the [final Chat API call](https://openai.com/blog/function-calling-and-other-api-updates) including actual system prompt and chat history.
+However, if user inquiry does not invoke function call, we can get normal response.
+
+```javascript
+{ role: 'assistant', content: 'Hi there! How can I assist you today?' }
+```
+
+In this case, it is necessary to call the Chat Completions API again with actual system prompt and chat history to get proper response:
 
 ```javascript
 {
@@ -88,79 +121,6 @@ Otherwise, the response is like this:
   content: 'Welcome to Super Supermarket! How can I assist you today?'
 }
 ```
-
-In this demo, I do not call any external API or function but just mock the step.
-
-From `/api/route.js`
-
-```javascript
-// Mock Call function API here
-//const price = 1 + Math.round(100 * Math.random())
-//console.log('price', price)
-
-const args = JSON.parse(result.function_call.arguments) // supports array
-
-let func_result = args.product.map((a) => {
-  return {
-    name: a,
-    price: 1 + Math.round(100 * Math.random()) // just mock
-  }
-})
-```
-
-will result to:
-
-```javascript
-
-console.log(func_result)
-
-// '[{"name":"brown rice","price":4},{"name":"pork belly","price":4},{"name":"garlic","price":5},{"name":"vinegar","price":22},{"name":"soy sauce","price":50}]'
-```
-
-From the given [sample in OpenAI's page](https://openai.com/blog/function-calling-and-other-api-updates),
-we need to add the previous function call return plus the API return value to the `messages` array:
-
-```javascript
-
-// previous step
-let messages = [
-    { role: 'system', content: system },
-]
-
-messages = messages.concat(prev_data)
-messages.push({ role: 'user', content: inquiry })
-
-// first chat completion call
-...
-
-// add function call return
-messages.push(result)
-
-// add function API return
-//messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify({ price })})
-
-messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify(func_result)})
-```
-
-The expected result after this step is just simple response:
-
-```javascript
-{
-  role: 'assistant',
-  content: '...'
-}
-```
-
-# Thinking Out Loud
-
-Since sending too much data to the API cost money, I wonder what is the best way to implement `function call`.
-
-In this demo, in the first API call, we do not know if the user inquiry will invoke `function call` so we are sending the system prompt and the previous conversation. If it does not contain `function call`, then we just pay a small price for the `function call` part.
-
-However, if it does contain `function call`, then we send everything back again plus some more (function call and external API/function result). So, you can see that we double the tokens consumed.
-
-The question is, would it be better to just check for `function call` first, without sending `previous conversations` and `system prompt`? If it failed, we just have the penalty of calling for the `function definition`. Is this approach better?
-
 
 # Mutiple Function Call
 
