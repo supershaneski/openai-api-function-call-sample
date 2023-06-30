@@ -27,7 +27,7 @@ export async function POST(request) {
                         items: {
                             type: "object",
                             properties: {
-                                name: { type: "string", description: "Name of product, e.g. San Francisco, CA" },
+                                name: { type: "string", description: "Name of product, e.g. banana, apple, spinach" },
                                 quantity: { type: "integer", description: "Quantity of product, e.g. 1, 2, 37" },
                                 unit: { type: "string", description: "Unit of quantity, e.g. kg, pcs, bottle, bag, packs" }
                             }
