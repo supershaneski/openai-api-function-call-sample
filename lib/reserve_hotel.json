@@ -1,0 +1,54 @@
+{
+    "name": "reserve_hotel",
+    "description": "Reserve a room for the user in the hotel",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "hotel": {
+          "type": "string",
+          "description": "Name of the hotel"
+        },
+        "fullName": {
+            "type": "string",
+            "description": "Full name of the user making reservation"
+        },
+        "numberOfGuests": {
+            "type": "integer",
+            "description": "Total number of people who will be staying in the room"
+        },
+        "checkInDate": {
+            "type": "string",
+            "description": "Date when the guests will arrive"
+        },
+        "checkOutDate": {
+            "type": "string",
+            "description": "Date when the guests will leave"
+        },
+        "roomType": {
+            "type": "string",
+            "description": "Type of room desired (e.g., single, double, suite)",
+            "enum": [
+                "single",
+                "double",
+                "suite"
+            ]
+        },
+        "specialRequests": {
+            "type": "array",
+            "description": "Any specific requests like a room on a certain floor, near the elevator, extra bed, etc.",
+            "items": {
+                "type": "string"
+            }
+        }
+      },
+      "required": [
+        "hotel",
+        "fullName",
+        "numberOfGuests",
+        "checkInDate",
+        "checkOutDate",
+        "roomType",
+        "specialRequests"
+      ]
+    }
+}

@@ -1,0 +1,16 @@
+{
+    "name": "get_event",
+    "description": "Get event information based on the given event name",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "type": "string",
+          "description": "Name of the event"
+        }
+      },
+      "required": [
+        "event"
+      ]
+    }
+}

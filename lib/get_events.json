@@ -1,0 +1,21 @@
+{
+    "name": "get_events",
+    "description": "Get events based on the given location and date",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "Location or place name of the event"
+        },
+        "date": {
+            "type": "string",
+            "description": "Date of the event"
+          }
+      },
+      "required": [
+        "location",
+        "date"
+      ]
+    }
+}

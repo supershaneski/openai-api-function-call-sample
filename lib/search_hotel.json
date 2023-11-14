@@ -1,0 +1,16 @@
+{
+    "name": "search_hotel",
+    "description": "Search for hotels based on the given location",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "Location or place name where the user wants to find a hotel"
+        }
+      },
+      "required": [
+        "location"
+      ]
+    }
+}

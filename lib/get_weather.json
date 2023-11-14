@@ -1,0 +1,21 @@
+{
+    "name": "get_weather",
+    "description": "Get the weather forecast based on the given location and date",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "Location or place name"
+        },
+        "date": {
+            "type": "string",
+            "description": "Date of forecast"
+          }
+      },
+      "required": [
+        "location",
+        "date"
+      ]
+    }
+}
