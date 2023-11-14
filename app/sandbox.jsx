@@ -25,6 +25,8 @@ import LoadingText from '../components/loadingtext'
 
 import { getUniqueId } from '../lib/utils'
 
+import useAppStore from '../stores/appStore'
+
 import classes from './sandbox.module.css'
 
 const FunctionTypes = [
@@ -35,7 +37,13 @@ const FunctionTypes = [
 
 export default function Sandbox() {
 
+    const storedMessages = useAppStore((state) => state.messages)
+    const addMessage = useAppStore((state) => state.addMessage)
+    const clearMessages = useAppStore((state) => state.clearMessages)
+
     const inputRef = React.useRef(null)
+
+    const [isMounted, setMounted] = React.useState(false)
 
     const [loading, setLoading] = React.useState(false)
     const [inputText, setInputText] = React.useState('')
@@ -43,6 +51,21 @@ export default function Sandbox() {
 
     const [funcType, setFuncType] = React.useState(0)
     
+    React.useEffect(() => {
+
+        setMounted(true)
+
+    }, [])
+
+    React.useEffect(() => {
+
+        if(isMounted) {
+
+            //
+
+        }
+
+    }, [isMounted])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
