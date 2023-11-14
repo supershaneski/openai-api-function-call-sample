@@ -1,38 +1,41 @@
-import { Configuration, OpenAIApi } from 'openai'
+import OpenAI from 'openai'
 
-const configuration = new Configuration({
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+    maxRetries: 3,
+    timeout: 60 * 1000
 })
 
-const openai = new OpenAIApi(configuration)
-
 export async function chatCompletion({
-    model = 'gpt-3.5-turbo-0613',
-    max_tokens = 1024,
+    model = 'gpt-3.5-turbo-1106',
+    max_tokens = 2048,
     temperature = 0,
     messages,
-    functions,
-    function_call = 'auto',
+    tools,
 }) {
+
+    let options = { messages, model, temperature, max_tokens }
+
+    if(tools) {
+
+        options.tools = tools
+
+    }
+
     try {
 
-        const result = await openai.createChatCompletion({
-            messages,
-            model,
-            max_tokens,
-            temperature,
-            functions,
-            function_call,
-        })
+        const result = await openai.chat.completions.create(options)
 
-        if (!result.data.choices[0].message) {
-            throw new Error("No return error from chat");
-        }
+        console.log(result)
 
-        return result.data.choices[0].message //?.content
+        return result.choices[0]
 
     } catch(error) {
-        console.log(error)
+        
+        console.log(error.name, error.message)
+        
         throw error
+
     }
+    
 }
