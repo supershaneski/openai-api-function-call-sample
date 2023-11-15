@@ -8,6 +8,10 @@
           "type": "string",
           "description": "Name of the hotel"
         },
+        "location": {
+            "type": "string",
+            "description": "Location or branch of the hotel"
+        },
         "fullName": {
             "type": "string",
             "description": "Full name of the user making reservation"
@@ -43,6 +47,7 @@
       },
       "required": [
         "hotel",
+        "location",
         "fullName",
         "numberOfGuests",
         "checkInDate",

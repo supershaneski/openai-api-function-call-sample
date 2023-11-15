@@ -1,138 +1,84 @@
 import { chatCompletion } from '../../service/openai'
-
-import { isEven, trim_array } from '../../lib/utils'
+import { trim_array } from '../../lib/utils'
+import get_weather from '../../lib/get_weather.json'
+import get_events from '../../lib/get_events.json'
+import get_event from '../../lib/get_event.json'
+import search_hotel from '../../lib/search_hotel.json'
+import get_hotel from '../../lib/get_hotel.json'
+import reserve_hotel from '../../lib/reserve_hotel.json'
 
 export async function POST(request) {
 
-    const { system, inquiry, previous } = await request.json()
+    const { inquiry, previous } = await request.json()
     
-    if (!system || !inquiry || !Array.isArray(previous)) {
+    if (!inquiry || !Array.isArray(previous)) {
         return new Response('Bad system prompt', {
             status: 400,
         })
     }
 
-    // just a simple way to manage chat history by limiting to 20 turns
-    let prev_data = trim_array(previous, 20)
+    console.log('user', inquiry, (new Date()).toLocaleTimeString())
+
+    let context = trim_array(previous, 20)
     
-    const functions = [
-        {
-            name: 'get_product_price', 
-            description: 'Get prices of the given products and its quantities', 
-            parameters: {
-                type: 'object', 
-                properties: {
-                    products: {
-                        type: 'array', 
-                        items: {
-                            type: "object",
-                            properties: {
-                                name: { type: "string", description: "Name of product, e.g. banana, apple, spinach" },
-                                quantity: { type: "integer", description: "Quantity of product, e.g. 1, 2, 37" },
-                                unit: { type: "string", description: "Unit of quantity, e.g. kg, pcs, bottle, bag, packs" }
-                            }
-                        }
-                    }
-                }, 
-                required: ['products']
-            }
-        }
-    ]
+    const today = new Date()
 
-    let result = {}
-
-    // system prompt as additional guard rail for function call
-    let function_system_prompt = `If the user wants to know the price, call get_product_price function, which requires product and quantity as required parameters.`
-
-    let messages = [{ role: 'system', content: function_system_prompt }]
+    const system_prompt = `You are a helpful personal assistant.\n\n` +
+        `# Tools\n` +
+        `You have the following tools that you can invoke based on the user inquiry.\n` +
+        `- get_weather, when the user wants to know the weather forecast given a location and date.\n` +
+        `- get_events, when the user wants to know events happening in a given location and date.\n` +
+        `- get_event, when the user wants to know more about a particular event.\n` +
+        `- search_hotel, when the user wants to search for hotel based on given location.\n` +
+        `- get_hotel, when the user wants to know more about a particular hotel.\n` +
+        `- reserve_hotel, when the user wants to make room reservation for a particular hotel.\n` +
+        `When the user is making hotel reservation, be sure to guide the user to fill up all required information.` +
+        //`Always be brief and concise in your reply.\n` +
+        `Aside from the listed functions above, answer all other inquiries by telling the user that it is out of scope of your ability.\n\n` +
+        `# User\n` +
+        `If my full name is needed, please ask me for my full name.\n\n` +
+        `# Language Support\n` +
+        `Please reply in the language used by the user.\n\n` +
+        `Today is ${today}`
+    
+    let messages = [{ role: 'system', content: system_prompt }]
+    if(context.length > 0) {
+        messages = messages.concat(context)
+    }
     messages.push({ role: 'user', content: inquiry })
+
+    let result_message = null
 
     try {
         
-        result = await chatCompletion({
+        let result = await chatCompletion({
+            temperature: 0.3,
             messages,
-            functions
+            tools: [
+                { type: 'function', function: get_weather },
+                { type: 'function', function: get_events },
+                { type: 'function', function: get_event },
+                { type: 'function', function: search_hotel },
+                { type: 'function', function: get_hotel },
+                { type: 'function', function: reserve_hotel },
+                //{ type: 'function', function: get_stock_moving_average_trend }
+            ]
         })
 
-        console.log('function call', result)
+        console.log('function-calling', result)
+
+        result_message = result.message
 
     } catch(error) {
 
-        console.log(error)
-
-    }
-
-    if(result.content === null) {
-
-        // mock api processing       
-        const func_call = result
-        const func_args = JSON.parse(func_call.function_call.arguments)
-
-        let func_result = func_args.products.map((item) => {
-            const price = 1 + Math.round(100 * Math.random())
-            return {
-                ...item,
-                price
-            }
-        })
-
-        console.log('mock api result', func_result)
-        
-        // final chat completions call with actual system prompt, history, function call result and api result
-        // to summarize everything.
-
-        messages = [{ role: 'system', content: system }]
-        if(prev_data.length > 0) {
-            messages = messages.concat(prev_data)
-        }
-        messages.push({ role: 'user', content: inquiry })
-        messages.push(func_call) // function call result
-        messages.push({"role": "function", "name": "get_product_price", "content": JSON.stringify(func_result)}) // mock api result
-        
-        try {
-
-            result = await chatCompletion({
-                messages,
-                temperature: 0.7,
-                functions
-            })
-
-            console.log('summary', result)
-
-        } catch(error) {
-            console.log(error)
-        }
-
-    } else {
-
-        // we will call again the chat completions api
-        // but now we will use the actual system prompt
-        // and with chat history.
-
-        let messages = [{ role: 'system', content: system }]
-        if(prev_data.length > 0) {
-            messages = messages.concat(prev_data)
-        }
-        messages.push({ role: 'user', content: inquiry })
-        
-        try {
-
-            result = await chatCompletion({
-                messages,
-                temperature: 0.7,
-                functions,
-            })
-
-        } catch(error) {
-            console.log(error)
-        }
+        console.log(error.name, error.message)
 
     }
 
     return new Response(JSON.stringify({
-        result,
+        output: result_message,
     }), {
         status: 200,
     })
-
+    
 }

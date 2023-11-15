@@ -1,16 +1,26 @@
 {
     "name": "get_event",
-    "description": "Get event information based on the given event name",
+    "description": "Get event information based on the given event name, location and date",
     "parameters": {
       "type": "object",
       "properties": {
         "event": {
           "type": "string",
           "description": "Name of the event"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location or place of the event"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the event"
         }
       },
       "required": [
-        "event"
+        "event",
+        "location",
+        "date"
       ]
     }
 }

@@ -1,284 +1,108 @@
-import { cookies } from 'next/headers'
 import { chatCompletion } from '../../service/openai'
-import { isEven } from '../../lib/utils'
 import { callMockAPI } from '../../lib/mockapi'
-
-/**
- * A very simplistic way to maintain history and not reach max token.
- * We just set the maximum allowed entries into max_length.
- */
-const trim_array = ( arr, max_length = 20 ) => {
-
-    let new_arr = arr
-    
-    if(arr.length > max_length) {
-        
-        let cutoff = Math.ceil(arr.length - max_length)
-        cutoff = isEven(cutoff) ? cutoff : cutoff + 1
-        
-        new_arr = arr.slice(cutoff)
-
-    }
-
-    return new_arr
-
-}
-
-/**
- * Sample mutiple function that share the same parameters.
- */
-const functions = [
-    {
-        "name": "get_user_inquiry",
-        "description": "Get users inquiry",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "location": {
-                    "type": "string",
-                    "description": "The city, place or any location" //, e.g. San Francisco, CA"
-                },
-                "date": {
-                    "type": "string",
-                    "description": "The date or day, e.g. 2023-06-19, today, tomorrow"
-                },
-                "operation": {
-                    "type": "array",
-                    "description": "Topic of inquiry, e.g. weather, event, hotels",
-                    "enum": ["weather", "event", "hotels"],
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            },
-            "required": ["location", "date"]
-        }
-    }
-]
-
-const callCompletion = async (messages, functions, temperature = 0) => {
-
-    try {
-        //const options = { messages, functions }
-        const options = { messages }
-        
-        if(functions) {
-            options.functions = functions
-        }
-
-        if (temperature > 0) {
-            options.temperature = temperature
-        }
-
-        const response = await chatCompletion(options)
-
-        return response
-
-    } catch (error) {
-
-        console.log(error)
-
-        return null
-
-    }
-}
-
-const setMessages = (inquiry, previous, system) => {
-
-    let messages = system ? [{ role: 'system', content: system }] : []
-
-    if(Array.isArray(previous)) {
-        messages = messages.concat(previous)
-    }
-
-    messages.push({ role: 'user', content: inquiry })
-
-    return messages
-
-}
-
-/**
- * Validating the parameters received from function call.
- * Using the saved parameters (deflocation, defdate) in some cases.
- * You will probably need to customize a similar function for your own purpose.
- * This is just the first step to ensure that we are sending valid parameters
- * to the external API.
- */
-const validateParameters = (args, deflocation, defdate) => {
-    
-    let location = (args.hasOwnProperty('location') && args.location.length > 0) ? args.location : deflocation
-    location = location === 'nearby' || location === 'current' || location === 'tomorrow' ?  deflocation : location
-    let date = (args.hasOwnProperty('date') && args.date.length > 0) ? args.date : defdate
-    let operation = args.hasOwnProperty('operation') ? args.operation : ['event']
-    
-    return {
-        location, 
-        date, 
-        operation
-    }
-}
-
-const setMessageResponse = (msg) => {
-    return new Response(JSON.stringify({
-        result: { role: 'assistant', content: msg },
-    }), {
-        status: 200,
-    })
-}
+import { trim_array } from '../../lib/utils'
+import get_weather from '../../lib/get_weather.json'
+import get_events from '../../lib/get_events.json'
+import get_event from '../../lib/get_event.json'
+import search_hotel from '../../lib/search_hotel.json'
+import get_hotel from '../../lib/get_hotel.json'
+import reserve_hotel from '../../lib/reserve_hotel.json'
 
 export async function POST(request) {
 
-    const { system, inquiry, previous } = await request.json()
+    const { tools, previous } = await request.json()
 
-    if (!system || !inquiry || !Array.isArray(previous)) {
+    if (!Array.isArray(tools) || !Array.isArray(previous)) {
         return new Response('Bad system prompt', {
             status: 400,
         })
     }
 
-    // Limit chat history
-    let prev_data = trim_array(previous, 20)
+    console.log('tools', tools, (new Date()).toLocaleTimeString())
 
-    // get stored parameters
-    const cookieStore = cookies()
-    const session_var = cookieStore.get('session-var')
-    const sessions = typeof session_var !== 'undefined' ? JSON.parse(session_var.value) : {}
-    
-    const default_location = Object.keys(sessions).length > 0 ? sessions.location : ''
-    const default_date = Object.keys(sessions).length > 0 ? sessions.date : ''
+    let tools_output = []
 
-    // Step 1. Call API to check for function call
-    let messages = setMessages(inquiry, null, 'Make sure that extracted parameters are valid according to the description.')
-    let response = await callCompletion(messages, functions)
+    for(let tool of tools) {
+        
+        let tool_args = JSON.parse(tool.function.arguments)
 
-    if(!response) {
-        return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
+        const tool_output = callMockAPI(tool.function.name, tool_args)
+        
+        tools_output.push({ 
+            tool_call_id: tool.id, 
+            role: 'tool', 
+            name: tool.function.name, 
+            content: JSON.stringify(tool_output, null, 2) 
+        })
+
     }
 
-    let error_flag = false
-    let iterate_count = 0
-    let max_iterate_count = 3 // prevents infinite loop
+    console.log('tools-output', tools_output)
     
-    let func_result = null
-    let mock_api_result = null
+    let context = trim_array(previous, 20)
 
-    // We will process the result using loop
-    do {
+    const today = new Date()
 
-        console.log('loop', iterate_count)
+    const system_prompt = `You are a helpful personal assistant.\n\n` +
+        `# Tools\n` +
+        `You have the following tools that you can invoke based on the user inquiry.\n` +
+        `- get_weather, when the user wants to know the weather forecast given a location and date.\n` +
+        `- get_events, when the user wants to know events happening in a given location and date.\n` +
+        `- get_event, when the user wants to know more about a particular event.\n` +
+        `- search_hotel, when the user wants to search for hotel based on given location.\n` +
+        `- get_hotel, when the user wants to know more about a particular hotel.\n` +
+        `- reserve_hotel, when the user wants to make room reservation for a particular hotel.\n` +
+        `When the user is making hotel reservation, be sure to guide the user to fill up all required information.` +
+        //`Always be brief and concise in your reply.\n` +
+        `Aside from the listed functions above, answer all other inquiries by telling the user that it is out of scope of your ability.\n\n` +
+        `# User\n` +
+        `If my full name is needed, please ask me for my full name.\n\n` +
+        `# Language Support\n` +
+        `Please reply in the language used by the user.\n\n` +
+        `Today is ${today}`
 
-        // Response has no function call
-        if (response.content !== null) {
+    let messages = [{ role: 'system', content: system_prompt }]
+    if(context.length > 0) {
+        messages = messages.concat(context)
+    }
 
-            console.log('plain response')
+    messages.push({ role: 'assistant', content: null, tool_calls: tools })
+    for(let output_item of tools_output) {
+        messages.push(output_item)
+    }
 
-            // Step 2. If Step 1 returns no function call, we will call the API again
-            // with chat history and main system prompt.
-            messages = setMessages(inquiry, prev_data, system)
-            
-            // Remove functions in API call, I think it causes redundant function call response
-            //response = await callCompletion(messages, functions, 0.7)
+    let result_message = null
 
-            response = await callCompletion(messages, null, 0.7)
+    try {
+        
+        let result = await chatCompletion({
+            temperature: 0.3,
+            messages,
+            tools: [
+                { type: 'function', function: get_weather },
+                { type: 'function', function: get_events },
+                { type: 'function', function: get_event },
+                { type: 'function', function: search_hotel },
+                { type: 'function', function: get_hotel },
+                { type: 'function', function: reserve_hotel },
+                //{ type: 'function', function: get_stock_moving_average_trend }
+            ]
+        })
 
-            if(!response) {
+        console.log('chat-summary', result)
 
-                error_flag = true
+        result_message = result.message
 
-                return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
-            
-            }
+    } catch(error) {
 
-            console.log('plain call result', response)
+        console.log(error.name, error.message)
 
-            // This is the expected response
-            if(response.content !== null) {
+    }
 
-                return new Response(JSON.stringify({
-                    result: response,
-                }), {
-                    status: 200,
-                })
+    return new Response(JSON.stringify({
+        output: result_message,
+    }), {
+        status: 200,
+    })
 
-            }
-
-            // However, it is possible to get function call response here.
-            // So we just sent it back the loop for processing.
-            
-
-        // Response has function call 
-        } else {
-
-            console.log("function call", response)
-
-            // When we receive function call response, we validate the parameters.
-            func_result = response
-
-            let func_args = JSON.parse(func_result.function_call.arguments)
-
-            console.log('stored parameters', default_location, default_date)
-
-            const { location, date, operation } = validateParameters(func_args, default_location, default_date)
-            
-            // I am saving the parameters in the cookie
-            // in case, next function call has few missing parameters
-            cookieStore.set('session-var', JSON.stringify({
-                location,
-                date,
-            }))
-    
-            // Call Mock API
-            let data = callMockAPI({ location, date, operation })
-
-            mock_api_result = {
-                ...data,
-                location,
-                date
-            }
-
-            console.log('mock api result', mock_api_result)
-
-            // Step 3. We now put everything into final API call to summarize
-            // In some cases, ChatGPT will decide that the function call/API result is wrong based from the
-            // context of overall conversation which the function call API misses, it will return
-            // another function call.
-            messages = setMessages(inquiry, prev_data, system)
-            messages.push(func_result)
-            messages.push({ role: "function", name: "get_user_inquiry", content: JSON.stringify(mock_api_result)})
-            
-            response = await callCompletion(messages, functions, 0.7)
-
-            if(!response) {
-
-                error_flag = true
-
-                return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
-            
-            }
-
-            console.log('summarize call result', response)
-
-            // This is the expected response
-            if(response.content !== null) {
-
-                return new Response(JSON.stringify({
-                    result: response,
-                }), {
-                    status: 200,
-                })
-
-            }
-
-            // However, it is possible to get function call response here.
-            // So we just sent it back the loop for processing.
-
-        }
-
-        // max_iterate_count will prevent infinite loop 
-        iterate_count++
-
-    } while(!error_flag && !error_flag && iterate_count < max_iterate_count)
-
-    return setMessageResponse('Unexpected error. Can you please submit your inquiry again?')
-    
 }

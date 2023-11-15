@@ -9,6 +9,10 @@ import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
+import Button from '@mui/material/Button'
+import Fab from '@mui/material/Fab'
+
+import ResetIcon from '@mui/icons-material/RestartAlt'
 import ClearIcon from '@mui/icons-material/Clear'
 import SendIcon from '@mui/icons-material/Send'
 import SettingsIcon from '@mui/icons-material/Settings'
@@ -18,6 +22,8 @@ import PersonIcon from '@mui/icons-material/AccountCircle'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+
+import Markdown from 'react-markdown'
 
 import OpenAiIcon from '../components/openailogo'
 import LoadingText from '../components/loadingtext'
@@ -30,9 +36,8 @@ import useAppStore from '../stores/appStore'
 import classes from './sandbox.module.css'
 
 const FunctionTypes = [
-    { name: 'Price Of Array Of Products', description: 'e.g. What is price of banana, apple and orange?' },
-    { name: 'Multiple Function Call', description: 'e.g. What are the events happening in Sapporo today, what is the weather like, and any nearby hotels?' },
-    { name: 'Extract Structured Data From Text', description: 'Extract all people (name, birthday, location) mentioned in the text' },
+    { name: 'Using Chat Completions API', description: '' },
+    { name: 'Using Assistants API', description: 'You need to configure the Assistant in the Playground' }
 ]
 
 export default function Sandbox() {
@@ -41,6 +46,7 @@ export default function Sandbox() {
     const addMessage = useAppStore((state) => state.addMessage)
     const clearMessages = useAppStore((state) => state.clearMessages)
 
+    const messageRef = React.useRef(null)
     const inputRef = React.useRef(null)
 
     const [isMounted, setMounted] = React.useState(false)
@@ -61,7 +67,7 @@ export default function Sandbox() {
 
         if(isMounted) {
 
-            //
+            setMessageItems(storedMessages)
 
         }
 
@@ -75,107 +81,152 @@ export default function Sandbox() {
         const text = inputText
 
         setInputText('')
-
         inputRef.current.blur()
 
-        const previous = messageItems.map((item) => {
+        let previous = messageItems.map((item) => {
             return {
                 role: item.role,
                 content: item.content,
             }
         })
 
-        const newData = {
+        const newUserMessage = {
             id: getUniqueId(),
-            datetime: (new Date()).toISOString(),
+            created_at: (new Date()).toISOString(),
             role: 'user',
             content: text
         }
+        setMessageItems((prev) => [...prev, ...[newUserMessage]])
+        addMessage(newUserMessage)
 
-        setMessageItems((prev) => [...prev, ...[newData]])
+        resetScroll()
 
-        let system = ''
-        let url = ''
-
-        if(funcType === 2) {
-
-            system = `You are a helpful assistant.\n` +
-            `Extract all info related to people from the user's given text.`
-
-            url = '/api3/'
-
-        } else if(funcType === 1) {
-
-            system = `You are a helpful event organizer rep.\n` +
-            `You will assist the user with their requests and inquiries.\n` +
-            `Always start the conversation with polite greeting: Welcome to Events Unlimited.`
-
-            url = '/api2/'
-
-        } else {
-
-            system = `You are a helpful customer service rep.\n` +
-            `You will assist the user with their requests and inquiries.\n` +
-            `Always start the conversation with polite greeting: Welcome to Super Supermarket.`
-
-            url = '/api/'
-
-        }
+        let result_tools = []
+        let isCompleted = false
+        let MAX_LOOP_COUNT = 10
+        let loopCount = 0
 
         try {
             
-            const response_chat = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    system,
-                    inquiry: text,
-                    previous,
+            do {
+
+                const url = result_tools.length > 0 ? '/api2' : '/api'
+                
+                const payload = result_tools.length > 0 ? { tools: result_tools, previous } : { inquiry: text, previous }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
                 })
-            })
-
-            const result_chat = await response_chat.json()
-
-            console.log(result_chat)
-
-            const result = result_chat.result
-
-            if(Object.keys(result).length > 0) {
-
-                const replyData = {
-                    ...result,
-                    id: getUniqueId(),
-                    datetime: (new Date()).toISOString(),
+    
+                if(!response.ok) {
+                    console.log('Oops, an error occurred', response.status)
                 }
-        
-                setMessageItems((prev) => [...prev, ...[replyData]])
+    
+                const result = await response.json()
+    
+                console.log(result)
+    
+                if(result.output.content) {
 
-            }
+                    console.log(result.output.content)
+    
+                    const newAssistantMessage = {
+                        id: getUniqueId(),
+                        created_at: (new Date()).toISOString(),
+                        role: 'assistant',
+                        content: result.output.content
+                    }
+                    setMessageItems((prev) => [...prev, ...[newAssistantMessage]])
+                    addMessage(newAssistantMessage)
+
+                    previous.push({ role: 'assistant', content: result.output.content })
+
+                    resetScroll()
+                    
+                }
+    
+                if(result.output.tool_calls) {
+
+                    loopCount++
+                    
+                    if(loopCount >= MAX_LOOP_COUNT) {
+                        
+                        isCompleted = true
+
+                    } else {
+
+                        result_tools = result.output.tool_calls
+
+                    }
+    
+                } else {
+
+                    isCompleted = true
+
+                }
+
+            } while(!isCompleted)
 
         } catch(error) {
 
-            console.log(error)
+            console.log(error.name, error.message)
+
+        } finally {
+
+            setLoading(false)
+
+            setTimeout(() => {
+                inputRef.current.focus()
+            }, 100)
 
         }
-        
-        setLoading(false)
 
+    }
+    
+    const resetScroll = () => {
         setTimeout(() => {
-            inputRef.current.focus()
-        }, 100);
+            messageRef.current.scrollTop = messageRef.current.scrollHeight + 24
+        }, 100)
+    }
+
+    const handleClearMessages = () => {
+
+        setMessageItems([])
+        clearMessages()
 
     }
 
     const handleChangeFunction = (e) => {
 
         setFuncType(e.target.value)
-        setMessageItems([])
+        //setMessageItems([])
 
     }
 
+    /*
+    <div key={item.id} className={classes.message}>
+                                    {
+                                        item.role === 'assistant' &&
+                                        <OpenAiIcon sx={{ mt: 1, ml: 1, mr: 2 }} />
+                                    }
+                                    {
+                                        item.role === 'function' &&
+                                        <SettingsIcon sx={{ mt: 1, ml: 1, mr: 2 }} />
+                                    }
+                                    <p className={classes.text}>
+                                    { item.content }
+                                    </p>
+                                    {
+                                        item.role === 'user' &&
+                                        <PersonIcon sx={{ mt: 1, ml: 2, mr: 1 }} />
+                                    }
+                                </div>
+    */
     return (
         <div className={classes.container}>
             <div className={classes.main}>
@@ -202,7 +253,7 @@ export default function Sandbox() {
                         </Select>
                     </FormControl>
                 </div>
-                <div className={classes.messages}>
+                <div ref={messageRef} className={classes.messages}>
                     {
                         messageItems.map((item) => {
                             return (
@@ -215,9 +266,9 @@ export default function Sandbox() {
                                         item.role === 'function' &&
                                         <SettingsIcon sx={{ mt: 1, ml: 1, mr: 2 }} />
                                     }
-                                    <p className={classes.text}>
-                                    { item.content }
-                                    </p>
+                                    <div className={classes.text}>
+                                        <Markdown>{ item.content }</Markdown>
+                                    </div>
                                     {
                                         item.role === 'user' &&
                                         <PersonIcon sx={{ mt: 1, ml: 2, mr: 1 }} />
@@ -234,6 +285,11 @@ export default function Sandbox() {
                     }
                 </div>
                 <div className={classes.chat}>
+                    <div className={classes.tool}>
+                        <Fab onClick={handleClearMessages} disabled={messageItems.length === 0 || loading} color="primary">
+                            <ResetIcon />
+                        </Fab>
+                    </div>
                     <div className={classes.input}>
                         <NoSsr>
                             <Box 
@@ -242,7 +298,7 @@ export default function Sandbox() {
                             noValidate>
                                 <TextField 
                                 autoFocus={true}
-                                placeholder={`Write your inquiry`}
+                                placeholder={`Send message`}
                                 disabled={loading}
                                 fullWidth
                                 //multiline

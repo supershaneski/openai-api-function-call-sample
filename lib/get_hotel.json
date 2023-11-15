@@ -1,16 +1,21 @@
 {
     "name": "get_hotel",
-    "description": "Get hotel information based on the given hotel name",
+    "description": "Get hotel information based on the given hotel name and location or branch",
     "parameters": {
       "type": "object",
       "properties": {
         "hotel": {
           "type": "string",
           "description": "Name of the hotel"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location or branch of hotel"
         }
       },
       "required": [
-        "hotel"
+        "hotel",
+        "location"
       ]
     }
 }

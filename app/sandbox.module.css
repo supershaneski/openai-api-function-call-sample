@@ -6,12 +6,13 @@
 .main {
     position: relative;
     height: 100%;
-    flex-shrink: 0;
+    /*flex-shrink: 0;*/
 }
 
 .header {
     box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px;
     background-color: #fff;
+    /*background-color: #a5e8;*/
     position: fixed;
     left: 0;
     top: 0;
@@ -26,15 +27,22 @@
 }
 .header span.desc {
     font-size: 0.9rem;
+    opacity: 0.6;
 }
 
 .messages {
-    position: relative;
-    margin-top: 80px;
-    height: calc(100% - 120px);
+    background-color: #fff;
+    /*position: relative;*/
+    /*margin-top: 80px;*/
+    position: absolute;
+    left: 0;
+    top: 80px;
+    width: 100%;
+    height: calc(100% - 150px); /*120*/
     overflow-y: auto;
+    scroll-behavior: smooth;
+    z-index: 1;
 }
-
 .message {
     padding: 1rem 1rem 0 1rem;
     display: flex;
@@ -48,22 +56,36 @@
     width: 100%;
     padding: 1rem;
     margin: 0;
-    white-space: pre-wrap;
+    /*white-space: pre-wrap;*/
+}
+.text img {
+    width: 80%;
+    max-width: 1024px;
+    height: auto;
 }
 .message:nth-child(odd) .text {
     background-color: #efefef;
 }
 
 .chat {
-    background-color: white;
+    /*background-color: gray;*/
     position: fixed;
     left: 0;
     bottom: 0;
     width: 100%;
     z-index: 5;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+}
+.tool {
+    /*background-color: aquamarine;*/
+    width: 70px;
 }
 .input {
-    margin: 1rem 1rem 3rem 1rem;
+    /*background-color: palevioletred;*/
+    /*margin: 1rem 1rem 3rem 1rem;*/
+    width: calc(100% - 90px);
 }
 
 .loader {
