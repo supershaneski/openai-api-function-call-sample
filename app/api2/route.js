@@ -18,7 +18,7 @@ export async function POST(request) {
         })
     }
 
-    console.log('tools', tools, (new Date()).toLocaleTimeString())
+    console.log('tool_calls', tools, (new Date()).toLocaleTimeString())
 
     let tools_output = []
 
@@ -27,7 +27,7 @@ export async function POST(request) {
         let tool_args = JSON.parse(tool.function.arguments)
 
         const tool_output = callMockAPI(tool.function.name, tool_args)
-        
+
         tools_output.push({ 
             tool_call_id: tool.id, 
             role: 'tool', 
@@ -37,7 +37,7 @@ export async function POST(request) {
 
     }
 
-    console.log('tools-output', tools_output)
+    console.log('tools-api-output', tools_output)
     
     let context = trim_array(previous, 20)
 
@@ -53,7 +53,6 @@ export async function POST(request) {
         `- get_hotel, when the user wants to know more about a particular hotel.\n` +
         `- reserve_hotel, when the user wants to make room reservation for a particular hotel.\n` +
         `When the user is making hotel reservation, be sure to guide the user to fill up all required information.` +
-        //`Always be brief and concise in your reply.\n` +
         `Aside from the listed functions above, answer all other inquiries by telling the user that it is out of scope of your ability.\n\n` +
         `# User\n` +
         `If my full name is needed, please ask me for my full name.\n\n` +
@@ -85,7 +84,6 @@ export async function POST(request) {
                 { type: 'function', function: search_hotel },
                 { type: 'function', function: get_hotel },
                 { type: 'function', function: reserve_hotel },
-                //{ type: 'function', function: get_stock_moving_average_trend }
             ]
         })
 

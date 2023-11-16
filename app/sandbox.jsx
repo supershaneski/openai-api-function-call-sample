@@ -1,8 +1,7 @@
 'use client'
 
 import React from 'react'
-
-//import { createPortal } from 'react-dom'
+import { createPortal } from 'react-dom'
 
 import NoSsr from '@mui/base/NoSsr'
 import Box from '@mui/material/Box'
@@ -28,6 +27,7 @@ import Markdown from 'react-markdown'
 import OpenAiIcon from '../components/openailogo'
 import LoadingText from '../components/loadingtext'
 //import Loader from '../components/loader'
+import Dialog from '../components/dialog'
 
 import { getUniqueId } from '../lib/utils'
 
@@ -56,6 +56,9 @@ export default function Sandbox() {
     const [messageItems, setMessageItems] = React.useState([])
 
     const [funcType, setFuncType] = React.useState(0)
+
+    const [isDialogShown, setDialogShown] = React.useState(false)
+    const [selFuncType, setSelFuncType] = React.useState(0)
     
     React.useEffect(() => {
 
@@ -72,6 +75,15 @@ export default function Sandbox() {
         }
 
     }, [isMounted])
+
+    const handleDialogCancel = () => {
+        setDialogShown(false)
+    }
+
+    const handleDialogConfirm = () => {
+        setFuncType(selFuncType)
+        setDialogShown(false)
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -103,7 +115,7 @@ export default function Sandbox() {
 
         let result_tools = []
         let isCompleted = false
-        let MAX_LOOP_COUNT = 10
+        let MAX_LOOP_COUNT = 10 // Don't want to let it run loose
         let loopCount = 0
 
         try {
@@ -203,7 +215,9 @@ export default function Sandbox() {
 
     const handleChangeFunction = (e) => {
 
-        setFuncType(e.target.value)
+        setSelFuncType(e.target.value)
+        setDialogShown(true)
+        //setFuncType(e.target.value)
         //setMessageItems([])
 
     }
@@ -332,6 +346,15 @@ export default function Sandbox() {
                     </div>
                 </div>
             </div>
+            {
+                isDialogShown && createPortal(
+                    <Dialog 
+                    onCancel={handleDialogCancel}
+                    onConfirm={handleDialogConfirm}
+                    />,
+                    document.body
+                )
+            }
         </div>
     )
 }
