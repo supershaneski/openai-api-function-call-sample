@@ -8,7 +8,7 @@ import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
-import Button from '@mui/material/Button'
+//import Button from '@mui/material/Button'
 import Fab from '@mui/material/Fab'
 
 import ResetIcon from '@mui/icons-material/RestartAlt'
@@ -46,6 +46,11 @@ export default function Sandbox() {
     const addMessage = useAppStore((state) => state.addMessage)
     const clearMessages = useAppStore((state) => state.clearMessages)
 
+    const threadId = useAppStore((state) => state.threadId)
+    const runId = useAppStore((state) => state.runId)
+    const setThreadId = useAppStore((state) => state.setThreadId)
+    const setRunId = useAppStore((state) => state.setRunId)
+
     const messageRef = React.useRef(null)
     const inputRef = React.useRef(null)
 
@@ -81,6 +86,15 @@ export default function Sandbox() {
     }
 
     const handleDialogConfirm = () => {
+
+        if(funcType > 0) {
+
+            // delete thread
+
+        }
+
+        handleClearMessages()
+
         setFuncType(selFuncType)
         setDialogShown(false)
     }
