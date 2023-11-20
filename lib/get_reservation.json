@@ -1,0 +1,26 @@
+{
+    "name": "get_reservation",
+    "description": "Get hotel reservation information based on the reservation id",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "reservationId": {
+          "type": "string",
+          "description": "Reservation Id"
+        },
+        "hotel": {
+            "type": "string",
+            "description": "Name of hotel"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location or branch of hotel"
+        }
+      },
+      "required": [
+        "reservationId",
+        "hotel",
+        "location"
+      ]
+    }
+}

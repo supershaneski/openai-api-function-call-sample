@@ -1,12 +1,12 @@
-import { chatCompletion } from '../../service/openai'
-import { callMockAPI } from '../../lib/mockapi'
-import { trim_array } from '../../lib/utils'
-import get_weather from '../../lib/get_weather.json'
-import get_events from '../../lib/get_events.json'
-import get_event from '../../lib/get_event.json'
-import search_hotel from '../../lib/search_hotel.json'
-import get_hotel from '../../lib/get_hotel.json'
-import reserve_hotel from '../../lib/reserve_hotel.json'
+import { chatCompletion } from '../../../service/openai'
+import { callMockAPI } from '../../../lib/mockapi'
+import { trim_array } from '../../../lib/utils'
+import get_weather from '../../../lib/get_weather.json'
+import get_events from '../../../lib/get_events.json'
+import get_event from '../../../lib/get_event.json'
+import search_hotel from '../../../lib/search_hotel.json'
+import get_hotel from '../../../lib/get_hotel.json'
+import reserve_hotel from '../../../lib/reserve_hotel.json'
 
 export async function POST(request) {
 
@@ -52,7 +52,8 @@ export async function POST(request) {
         `- search_hotel, when the user wants to search for hotel based on given location.\n` +
         `- get_hotel, when the user wants to know more about a particular hotel.\n` +
         `- reserve_hotel, when the user wants to make room reservation for a particular hotel.\n` +
-        `When the user is making hotel reservation, be sure to guide the user to fill up all required information.` +
+        `When the user is making hotel reservation, be sure to guide the user to fill up all required information.\n` +
+        `When you fill up some of the required information yourself, be sure to confirm to user before proceeding.\n` +
         `Aside from the listed functions above, answer all other inquiries by telling the user that it is out of scope of your ability.\n\n` +
         `# User\n` +
         `If my full name is needed, please ask me for my full name.\n\n` +

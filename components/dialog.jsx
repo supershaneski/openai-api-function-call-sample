@@ -8,6 +8,7 @@ import Button from '@mui/material/Button'
 import classes from './dialog.module.css'
 
 export default function Dialog({
+    disabled = false,
     onConfirm = undefined,
     onCancel = undefined,
 }) {
@@ -31,8 +32,8 @@ export default function Dialog({
                         <div className={classes.text}>{ `This will reset and delete your current conversation.\n\nAre you sure you want to continue?` }</div>
                     </div>
                     <div className={classes.action}>
-                        <Button sx={{ width: '80px', mr: 1, }} disableElevation variant="contained" onClick={onConfirm}>OK</Button>
-                        <Button disableElevation variant="contained" onClick={onCancel}>Cancel</Button>
+                        <Button disabled={disabled} sx={{ width: '80px', mr: 1, }} disableElevation variant="contained" onClick={onConfirm}>OK</Button>
+                        <Button disabled={disabled} disableElevation variant="contained" onClick={onCancel}>Cancel</Button>
                     </div>
                 </div>
             </NoSsr>
@@ -41,6 +42,10 @@ export default function Dialog({
 }
 
 Dialog.propTypes = {
+    /**
+     * disabled property
+     */
+    disabled: PropTypes.bool,
     /**
      * Confirm event handler
      */

@@ -43,13 +43,13 @@ const FunctionTypes = [
 export default function Sandbox() {
 
     const storedMessages = useAppStore((state) => state.messages)
+    const storedMode = useAppStore((state) => state.mode)
+    const setMode = useAppStore((state) => state.setMode)
     const addMessage = useAppStore((state) => state.addMessage)
     const clearMessages = useAppStore((state) => state.clearMessages)
 
     const threadId = useAppStore((state) => state.threadId)
-    const runId = useAppStore((state) => state.runId)
     const setThreadId = useAppStore((state) => state.setThreadId)
-    const setRunId = useAppStore((state) => state.setRunId)
 
     const messageRef = React.useRef(null)
     const inputRef = React.useRef(null)
@@ -75,6 +75,7 @@ export default function Sandbox() {
 
         if(isMounted) {
 
+            setFuncType(storedMode)
             setMessageItems(storedMessages)
 
         }
@@ -85,22 +86,53 @@ export default function Sandbox() {
         setDialogShown(false)
     }
 
-    const handleDialogConfirm = () => {
+    const deleteThread = async () => {
 
-        if(funcType > 0) {
+        try {
 
-            // delete thread
+            setLoading(true)
+
+            const response = await fetch('/assistant/thread', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ threadId: threadId }) //'thread_TkEOFBDhkyoTw2RCHn0i0AMD'
+            })
+
+            if(!response.ok) {
+                console.log('Oops, an error occurred', response.status)
+            }
+
+            const result = await response.json()
+
+            console.log(result)
+
+        } catch(error) {
+            
+            console.log(error.name, error.message)
+
+        } finally {
+
+            setLoading(false)
+            setThreadId('')
 
         }
 
-        handleClearMessages()
-
-        setFuncType(selFuncType)
-        setDialogShown(false)
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
+    const handleDialogConfirm = async () => {
+        
+        await handleClearMessages()
+
+        setMode(selFuncType)
+        setFuncType(selFuncType)
+        setDialogShown(false)
+
+    }
+
+    const submitChatCompletion = async () => {
 
         setLoading(true)
 
@@ -136,7 +168,7 @@ export default function Sandbox() {
             
             do {
 
-                const url = result_tools.length > 0 ? '/api2' : '/api'
+                const url = result_tools.length > 0 ? '/chat/function' : '/chat/message'
                 
                 const payload = result_tools.length > 0 ? { tools: result_tools, previous } : { inquiry: text, previous }
 
@@ -211,6 +243,125 @@ export default function Sandbox() {
             }, 100)
 
         }
+    }
+
+    const submitAssistant = async () => {
+
+        setLoading(true)
+
+        const text = inputText
+
+        setInputText('')
+        inputRef.current.blur()
+
+        const message_id = getUniqueId()
+
+        const newUserMessage = {
+            id: getUniqueId(),
+            created_at: (new Date()).toISOString(),
+            role: 'user',
+            content: text
+        }
+        setMessageItems((prev) => [...prev, ...[newUserMessage]])
+        addMessage(newUserMessage)
+
+        resetScroll()
+
+        try {
+
+            console.log('submit-assistant', threadId, text)
+
+            const thread_id = threadId ? threadId : ''
+
+            const response = await fetch('/assistant/message', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    inquiry: text,
+                    threadId: thread_id,
+                    messageId: message_id,
+                })
+            })
+
+            if(!response.ok) {
+                console.log('Oops, an error occurred', response.status)
+            }
+
+            const result = await response.json()
+
+            console.log("assistant", result)
+
+            setThreadId(result.threadId)
+
+            if(result.messages.length > 0) {
+
+                let new_messages = []
+
+                for(let i = 0; i < result.messages.length; i++) {
+                    
+                    const msg = result.messages[i]
+
+                    if (Object.prototype.hasOwnProperty.call(msg.metadata, 'id'))  {
+
+                        if(msg.metadata.id === message_id) {
+                            break // last message
+                        }
+
+                    } else {
+                        new_messages.push({
+                            id: msg.id,
+                            created_at: msg.created_at,
+                            role: msg.role,
+                            content: msg.content[0].text.value
+                        })
+                    }
+
+                }
+
+                if(new_messages.length > 0) {
+                    
+                    setMessageItems((prev) => [...prev, ...new_messages])
+
+                    for(let newmsg of new_messages) {
+                        addMessage(newmsg)
+                    }
+
+                    resetScroll()
+
+                }
+
+            }
+
+        } catch(error) {
+
+            console.log(error.name, error.message)
+
+        } finally {
+
+            setLoading(false)
+
+            setTimeout(() => {
+                inputRef.current.focus()
+            }, 100)
+
+        }
+    }
+
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+
+        if(funcType > 0) {
+
+            submitAssistant()
+
+        } else {
+
+            submitChatCompletion()
+
+        }
 
     }
     
@@ -220,7 +371,13 @@ export default function Sandbox() {
         }, 100)
     }
 
-    const handleClearMessages = () => {
+    const handleClearMessages = async () => {
+
+        if(funcType > 0 && threadId) {
+
+            await deleteThread()
+
+        }
 
         setMessageItems([])
         clearMessages()
@@ -231,37 +388,16 @@ export default function Sandbox() {
 
         setSelFuncType(e.target.value)
         setDialogShown(true)
-        //setFuncType(e.target.value)
-        //setMessageItems([])
 
     }
 
-    /*
-    <div key={item.id} className={classes.message}>
-                                    {
-                                        item.role === 'assistant' &&
-                                        <OpenAiIcon sx={{ mt: 1, ml: 1, mr: 2 }} />
-                                    }
-                                    {
-                                        item.role === 'function' &&
-                                        <SettingsIcon sx={{ mt: 1, ml: 1, mr: 2 }} />
-                                    }
-                                    <p className={classes.text}>
-                                    { item.content }
-                                    </p>
-                                    {
-                                        item.role === 'user' &&
-                                        <PersonIcon sx={{ mt: 1, ml: 2, mr: 1 }} />
-                                    }
-                                </div>
-    */
     return (
         <div className={classes.container}>
             <div className={classes.main}>
                 <div className={classes.header}>
                     <FormControl fullWidth>
                         <Select
-                        disabled={loading}
+                        disabled={loading || !isMounted}
                         value={funcType}
                         onChange={handleChangeFunction}
                         renderValue={(value) => (
@@ -363,6 +499,7 @@ export default function Sandbox() {
             {
                 isDialogShown && createPortal(
                     <Dialog 
+                    disabled={loading}
                     onCancel={handleDialogCancel}
                     onConfirm={handleDialogConfirm}
                     />,

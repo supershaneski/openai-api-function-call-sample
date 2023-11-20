@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
+export const APP_STORAGE_KEY = 'openai-api-function-call-sample-storage'
+
 const useAppStore = create(
     persist(
         (set, get) => ({
@@ -8,6 +10,7 @@ const useAppStore = create(
             messages: [],
             threadId: '',
             runId: '',
+            mode: 0,
             
             addMessage: (newmessage) => {
                 
@@ -20,11 +23,12 @@ const useAppStore = create(
             },
             clearMessages: () => set({ messages: [] }),
             setThreadId: (id) => set({ threadId: id }),
-            setRunId: (id) => set({ runId: id })
+            setRunId: (id) => set({ runId: id }),
+            setMode: (n) => set({ mode: n }),
             
         }),
         {
-            name: 'openai-api-function-call-sample-storage',
+            name: APP_STORAGE_KEY,
             storage: createJSONStorage(() => localStorage),
             version: 1,
         }
