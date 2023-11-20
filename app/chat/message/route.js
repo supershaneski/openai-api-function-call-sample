@@ -6,6 +6,7 @@ import get_event from '../../../lib/get_event.json'
 import search_hotel from '../../../lib/search_hotel.json'
 import get_hotel from '../../../lib/get_hotel.json'
 import reserve_hotel from '../../../lib/reserve_hotel.json'
+import get_reservation from '../../../lib/get_reservation.json'
 
 export async function POST(request) {
 
@@ -32,6 +33,7 @@ export async function POST(request) {
         `- search_hotel, when the user wants to search for hotel based on given location.\n` +
         `- get_hotel, when the user wants to know more about a particular hotel.\n` +
         `- reserve_hotel, when the user wants to make room reservation for a particular hotel.\n` +
+        `- get_reservation, when the user wants to get the details of their reservation.\n` +
         `When the user is making hotel reservation, be sure to guide the user to fill up all required information.\n` +
         `When you fill up some of the required information yourself, be sure to confirm to user before proceeding.\n` +
         `Aside from the listed functions above, answer all other inquiries by telling the user that it is out of scope of your ability.\n\n` +
@@ -61,6 +63,7 @@ export async function POST(request) {
                 { type: 'function', function: search_hotel },
                 { type: 'function', function: get_hotel },
                 { type: 'function', function: reserve_hotel },
+                { type: 'function', function: get_reservation },
             ]
         })
 

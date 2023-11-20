@@ -6,6 +6,19 @@ const openai = new OpenAI({
     timeout: 60 * 1000
 })
 
+
+export async function getAssistant() {
+
+    try {
+        
+        return await openai.beta.assistants.retrieve(process.env.OPENAI_ASSISTANT_ID)
+    
+    } catch(error) {
+        console.log(error.name, error.message)
+        throw error
+    }
+}
+
 export async function createThread() {
 
     try {
@@ -100,18 +113,21 @@ export async function getMessages({
 
 }
 
-export async function startRun({ threadId }) {
+export async function startRun({ threadId, instructions }) {
 
     try {
+        
+        let options = {
+            assistant_id: process.env.OPENAI_ASSISTANT_ID,
+        }
 
-        const today = new Date()
+        if(instructions) {
+            options.instructions = instructions
+        }
 
         return await openai.beta.threads.runs.create(
             threadId,
-            {
-                assistant_id: process.env.OPENAI_ASSISTANT_ID,
-                instructions: `Today is ${today}`
-            }
+            options
         )
     
     } catch(error) {

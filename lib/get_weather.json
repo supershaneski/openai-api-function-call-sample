@@ -10,7 +10,7 @@
         },
         "date": {
             "type": "string",
-            "description": "Date of forecast"
+            "description": "Date of forecast in 'YYYY-MM-DD' format"
           }
       },
       "required": [

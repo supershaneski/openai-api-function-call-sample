@@ -10,7 +10,7 @@
         },
         "date": {
             "type": "string",
-            "description": "Date of the event"
+            "description": "Date of the event in 'YYYY-MM-DD' format"
           }
       },
       "required": [

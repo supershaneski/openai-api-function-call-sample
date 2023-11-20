@@ -22,11 +22,11 @@
         },
         "checkInDate": {
             "type": "string",
-            "description": "Date when the guests will arrive"
+            "description": "Date when the guests will arrive in 'YYYY-MM-DD' format"
         },
         "checkOutDate": {
             "type": "string",
-            "description": "Date when the guests will leave"
+            "description": "Date when the guests will leave in 'YYYY-MM-DD' format"
         },
         "roomType": {
             "type": "string",

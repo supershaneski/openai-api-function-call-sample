@@ -1,4 +1,5 @@
 import { 
+    getAssistant,
     getThread, 
     createThread, 
     addMessage, 
@@ -23,9 +24,13 @@ export async function POST(request) {
     console.log("start assistant...", threadId, inquiry, (new Date()).toLocaleTimeString())
 
     let thread_id = threadId ? threadId : ''
+    let assistant_instructions = ''
     let messages_items = []
 
     try {
+
+        const assistant = await getAssistant()
+        assistant_instructions = assistant.instructions
 
         if(thread_id) {
 
@@ -53,7 +58,10 @@ export async function POST(request) {
 
         console.log('message', message)
 
-        const run = await startRun({ threadId: thread_id })
+        const run = await startRun({ 
+            threadId: thread_id,
+            instructions: assistant_instructions + `\nToday is ${new Date()}.`
+        })
 
         console.log('run', run)
 
