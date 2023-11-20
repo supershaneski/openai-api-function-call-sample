@@ -98,7 +98,7 @@ export default function Sandbox() {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ threadId: threadId }) //'thread_TkEOFBDhkyoTw2RCHn0i0AMD'
+                body: JSON.stringify({ threadId: threadId })
             })
 
             if(!response.ok) {
