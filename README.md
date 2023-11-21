@@ -66,7 +66,7 @@ For this sample app, we have the following functions:
 * get_reservation(hotel, location, reservationId)
 
 To handle the output for these functions/tools, I made a mock API call handler. See [mockapi.js](/lib/mockapi.js).
-To simulate actual data, I also ***"chache"*** the result to make it appear real so that you can go back and forth and have the same result using the same parameters.
+To simulate actual data, I also ***"cache"*** the result to make it appear real so that you can go back and forth and have the same result using the same parameters.
 
 Now, when you are writing your own functions, you need to make sure that the names, parameters and descriptions actually makes sense and easily understandable. 
 
