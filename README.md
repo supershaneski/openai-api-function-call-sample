@@ -19,6 +19,8 @@ This application is built using manual setup of Next.js 13.
 
 # Function Calling
 
+We will be using `gpt-3.5-turbo-1106`. You can also replace it with `gpt-4-1106-preview` by editing the [service/openai.js](/service/openai.js) file.
+
 To make better function calling, you need to take care of 4 things:
 * system prompt
 * writing the functions
@@ -621,6 +623,121 @@ We provided `status` and `message` to explicitly tell the AI that we need the na
   message: {
     role: 'assistant',
     content: 'Your reservation at "The Oak Inn" in Sapporo has been successfully completed. Your reservation ID is jq7o28a2ngelp6l9f6c. Please present this reservation ID at the front desk when you arrive. If you need any further assistance or information, feel free to ask!'
+  },
+  finish_reason: 'stop'
+}
+```
+
+The parallel function call illustrated above uses the same function. Let's give another example wherein the functions are different.
+
+> user: what is happening in sapporo on saturday and will it rain that day?
+
+```javascript
+// function calling
+[
+  {
+    id: 'call_TS9XlJ4SOO3c8PAJTEycoqyf',
+    type: 'function',
+    function: {
+      name: 'get_events',
+      arguments: '{"location": "Sapporo", "date": "2023-11-25"}'
+    }
+  },
+  {
+    id: 'call_1tWqZRdOwIvr6NVULIKTxsNA',
+    type: 'function',
+    function: {
+      name: 'get_weather',
+      arguments: '{"location": "Sapporo", "date": "2023-11-25"}'
+    }
+  }
+]
+
+// mock output
+[
+  {
+    tool_call_id: 'call_TS9XlJ4SOO3c8PAJTEycoqyf',
+    role: 'tool',
+    name: 'get_events',
+    content: '{\n' +
+      '  "location": "Sapporo",\n' +
+      '  "date": "2023-11-25",\n' +
+      '  "event": "Soul Food Festival"\n' +
+      '}'
+  },
+  {
+    tool_call_id: 'call_1tWqZRdOwIvr6NVULIKTxsNA',
+    role: 'tool',
+    name: 'get_weather',
+    content: '{\n' +
+      '  "location": "Sapporo",\n' +
+      '  "date": "2023-11-25",\n' +
+      '  "temperature": 4,\n' +
+      '  "unit": "celsius",\n' +
+      '  "condition": "Cloudy"\n' +
+      '}'
+  }
+]
+
+// summary
+{
+  index: 0,
+  message: {
+    role: 'assistant',
+    content: 'The Soul Food Festival is happening in Sapporo on November 25, 2023. The weather forecast for Sapporo on the same day is 4°C with cloudy conditions.'
+  },
+  finish_reason: 'stop'
+}
+```
+
+Here, we asked for the event and weather in a location at the same time.
+If you noticed, they use the same parameters. What if the parameters are different?
+
+> user: What is happening in Otaru on Friday and what is the weather in Asahikawa tomorrow?
+
+```javascript
+// function calling
+[
+  {
+    id: 'call_vu0Uu7EPO3TOB88mTEP2LxCg',
+    type: 'function',
+    function: {
+      name: 'get_events',
+      arguments: '{"location": "Otaru", "date": "2023-11-24"}'
+    }
+  },
+  {
+    id: 'call_I5qaXXhR7i4wfqlCLj8GTxnB',
+    type: 'function',
+    function: {
+      name: 'get_weather',
+      arguments: '{"location": "Asahikawa", "date": "2023-11-22"}'
+    }
+  }
+]
+
+// mock output
+[
+  {
+    tool_call_id: 'call_vu0Uu7EPO3TOB88mTEP2LxCg',
+    role: 'tool',
+    name: 'get_events',
+    content: '"{\\"location\\":\\"Otaru\\",\\"date\\":\\"2023-11-24\\",\\"event\\":\\"Street Dance Parade\\"}"'
+  },
+  {
+    tool_call_id: 'call_I5qaXXhR7i4wfqlCLj8GTxnB',
+    role: 'tool',
+    name: 'get_weather',
+    content: '"{\\"location\\":\\"Asahikawa\\",\\"date\\":\\"2023-11-22\\",\\"temperature\\":7,\\"unit\\":\\"celsius\\",\\"condition\\":\\"Sunny\\"}"'
+  }
+]
+
+// summary
+{
+  index: 0,
+  message: {
+    role: 'assistant',
+    content: 'The Street Dance Parade is happening in Otaru on November 24, 2023. The weather forecast for Asahikawa on November 22, 2023, is sunny with a temperature of 7°C.'
   },
   finish_reason: 'stop'
 }
