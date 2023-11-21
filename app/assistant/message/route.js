@@ -103,8 +103,25 @@ export async function POST(request) {
                 console.log('required-action', required_action)
                 console.log('required-tools', required_tools)
                 
-                const tool_output_items = []
+                let tool_output_items = []
 
+                for(let rtool of required_tools) {
+
+                    const function_name = rtool.function.name
+                    const tool_args = JSON.parse(rtool.function.arguments)
+                    
+                    console.log("-", function_name, tool_args)
+
+                    let tool_output = callMockAPI(function_name, tool_args)
+
+                    tool_output_items.push({
+                        tool_call_id: rtool.id,
+                        output: JSON.stringify(tool_output)
+                    })
+
+                }
+
+                /*
                 required_tools.forEach((rtool) => {
 
                     const function_name = rtool.function.name
@@ -118,6 +135,7 @@ export async function POST(request) {
                     })
 
                 })
+                */
 
                 console.log('tools-output', tool_output_items)
 
