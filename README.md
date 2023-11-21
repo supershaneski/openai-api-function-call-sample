@@ -19,13 +19,14 @@ This application is built using manual setup of Next.js 13.
 
 # Function Calling
 
-We will be using `gpt-3.5-turbo-1106`. You can also replace it with `gpt-4-1106-preview` by editing the [service/openai.js](/service/openai.js) file.
+We will be using `gpt-3.5-turbo-1106`. You can also replace it with `gpt-4-1106-preview` by editing the [service/openai.js](/service/openai.js) file. These two models supports the new function calling format and [parallel function calling](https://platform.openai.com/docs/guides/function-calling/parallel-function-calling).
 
-To make better function calling, you need to take care of 4 things:
-* system prompt
-* writing the functions
-* better handling of function output
-* API call loop
+In order to improve function calling, there are four key aspects to consider:
+* System prompts
+* Function composition
+* Effective function outputs
+* Looping through API calls
+
 
 ## System Prompt
 
@@ -54,23 +55,24 @@ const system_prompt = `You are a helpful personal assistant.\n\n` +
 
 Here, we have enumerated the available tools/functions and provided guidelines on when they should be invoked. We have also included additional instructions on how to manage certain functions and other general directives. Given that we’re dealing with events, it’s necessary to append the current date.
 
+
 ## Functions/Tools
 
 For this sample app, we have the following functions:
-* get_weather(location, date)
-* get_events(location, date)
-* get_event(location, date, event)
-* search_hotel(location)
-* get_hotel(location, hotel)
-* reserve_hotel(hotel, location, fullName, numberOfGuests, checkInDate, checkOutDate, roomType, specialRequests)
-* get_reservation(hotel, location, reservationId)
+* [get_weather](/lib/get_weather.json)(location, date)
+* [get_events](/lib/get_events.json)(location, date)
+* [get_event](/lib/get_event.json)(location, date, event)
+* [search_hotel](/lib/search_hotel.json)(location)
+* [get_hotel](/lib/get_hotel.json)(location, hotel)
+* [reserve_hotel](/lib/reserve_hotel.json)(hotel, location, fullName, numberOfGuests, checkInDate, checkOutDate, roomType, specialRequests)
+* [get_reservation](/lib/get_reservation.json)(hotel, location, reservationId)
 
 To handle the output for these functions/tools, I made a mock API call handler. See [mockapi.js](/lib/mockapi.js).
 To simulate actual data, I also ***"cache"*** the result to make it appear real so that you can go back and forth and have the same result using the same parameters.
 
 Now, when you are writing your own functions, you need to make sure that the names, parameters and descriptions actually makes sense and easily understandable. 
 
-Do not use uncommon abreviations or acronyms in names and parameters, specially the function name. The function name should convey exactly what you are tring to achieve. The description should also be clear and avoid writing too long description.
+Do not use uncommon abreviations or acronyms in names and parameters, specially the function name. The function name should convey exactly what you are tring to achieve. The description should also be clear and avoid writing very long description.
 
 The parameters should also make sense in the context of the function.
 Otherwise, the AI will not know how to supply its value. Worst, the AI will probably make up its own parameter.
@@ -80,8 +82,10 @@ A good rule of thumb is if a normal person can understand your function just by 
 
 ## Function Output
 
-This refers to the output of the external API when you supply the result from function calling.
-You need to handle all cases, all errors so that the AI will know how to handle them on their own.
+This refers to the output of the external API when you supply the result from function calling. Check the [mock api](/lib/mockapi.js) handler for this app.
+
+You need to handle all probable cases, all errors so that the AI will know how to handle them on their own. Be descriptive in your status and message. The AI will pickup your wording when it summarizes the result.
+
 For example, if you ask for the weather forecast for a certain place without supplying the date, and `get_weather` is invoked, here is a sample function output:
 
 ```javascript
@@ -89,12 +93,12 @@ For example, if you ask for the weather forecast for a certain place without sup
 ```
 
 Supply a clear and concise function output and let the AI deal with whatever the case might appear.
-Do not attempt to intercept it midway. Just use the output to send the result.
+Do not attempt to intercept it midway and handle it yourself. Just use the output to send the result back to the AI.
 
 
 ## API Call Loop
 
-Below is a rough outline of how to handle function calling in Chat Completions API.
+The following is a basic guide on how to manage function calls in the Chat Completions API.
 
 Please note that we are adding the context to all API calls. This is very important.
 You need to add the context unless your application is just one shot function calling.
@@ -147,10 +151,10 @@ Only when function calling is triggered, then we will handle it in a loop.
 The reason for this is there is a high possibility that the 2nd API call might still result with function calling.
 The AI often times call the functions on their own volition, if it see fit.
 So we will continue to process everything in a loop until the AI no longer calls function calling.
-Without handling it this way, you will curtail the AIs way to respond.
+Without handling it this way, you will curtail the AI's way to respond.
 Of course, it can run amok, so just in case, set a maximum loop limit before you hit the break.
 
-Now, if you look at my implementation, I am calling two endpoints separately for the [1st API call](/app/chat/message/route.js) and [2nd API call](/app/chat/function/route.js). This is a not so elegant way to handle what I just layed out above lol. I am doing this because there are cases when in 2nd function call, content (text) can be included in the result and I want to display it, too. If I am using streaming, this is not necessary, but alas, I do not know how to implement streaming in Next.js yet lol.
+Now, if you look at my implementation, I am calling two endpoints separately for the [1st API call](/app/chat/message/route.js) and [2nd API call](/app/chat/function/route.js). This is a ***not so elegant way*** to handle what I just layed out above lol. I am doing this because there are cases when in 2nd function call, content (text) can be included in the result and I want to display it, too. If I am using streaming, this is not necessary, but alas, I do not know how to implement streaming in Next.js yet lol.
 
 Okay, so much for the explanations. Let's see how it all works.
 
@@ -163,7 +167,7 @@ So, we start by asking for the events from a particular location, in this case, 
 
 Surprisingly, the AI send us the complete event info in one call.
 But under the hood, we can see that the AI called function calling twice!
-First, calling `get_events` to get all events give a location.
+First, calling `get_events` to get all events given a location.
 
 ```javascript
 // function calling
@@ -255,8 +259,7 @@ It then decided, what the heck, let's get the event information, too, invoking `
   finish_reason: 'stop'
 }
 ```
-
-Please note the provided links and images included in the summary. If you want to add links and images, take note that relative path is disregarded and you need the url in https.
+Notice the links and images included in the summary. If you wish to incorporate links and images, remember that relative paths are not recognized. You will also need to use HTTPS URLs.
 
 Next, we then we call the weather and search for hotel and get more information about the hotel.
 
@@ -697,7 +700,7 @@ The parallel function call illustrated above uses the same function. Let's give 
 ```
 
 Here, we asked for the event and weather in a location at the same time.
-If you noticed, they use the same parameters. What if the parameters are different?
+If you noticed, the two functions share the same parameters. What if the parameters are different?
 
 > user: What is happening in Otaru on Friday and what is the weather in Asahikawa tomorrow?
 
@@ -752,9 +755,9 @@ If you noticed, they use the same parameters. What if the parameters are differe
 
 # Assistants API
 
-Select the Assistants API in drop down to run the function calling using Assistants API.
-You need to create the Assistants in the dev page first and copy the Assistant id in the .env file.
-I do not want to create dynamic assistants. This way you can also test your Assistant in the Playground.
+Select the Assistants API in drop down to run the function calling demo using Assistants API.
+You need to create the Assistants in the [dev page](https://platform.openai.com/assistants) first and copy the ***Assistant id*** to the [.env file](#setup).
+I do not want to create dynamic assistants. This way you can also test your Assistant in the [Playground](https://platform.openai.com/playground).
 
 ![TravelBuddyGPT](./docs/screenshot05.png)
 
@@ -783,7 +786,7 @@ Then run the app again and test it similar to what we did in Chat Completions.
 Please note that it takes more time compared to Chat Completions and often ends in failure.
 Check and monitor the console log in command console (not the browser's) to see everything.
 
-Be sure to delete the thread after you use it since currently we have no way of seeing all abandoned and undeleted threads. Use the blue **Reset** button to delete the thread id during Assistants API mode.
+Be sure to delete the thread after you use it since currently we have no way of seeing all abandoned and undeleted threads. Use the blue **Reset** button to delete the ***thread id*** during Assistants API mode.
 
 Using Assistants API is pretty straight-forward
 
