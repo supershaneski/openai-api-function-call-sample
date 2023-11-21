@@ -85,13 +85,25 @@ export async function POST(request) {
 
             if(status === 'completed') {
 
-                console.log("-messages-", messageId)
-
                 const messages = await getMessages({ threadId: thread_id })
 
-                console.log('messages-show', messages)
+                //console.log('all-messages', messages)
 
-                messages_items = messages
+                let new_messages = []
+
+                for(let i = 0; i < messages.length; i++) {
+                    if (Object.prototype.hasOwnProperty.call(messages[i].metadata, 'id'))  {
+                        if(messages[i].metadata.id === messageId) {
+                            break // last message
+                        }
+                    } else {
+                        new_messages.push(messages[i])
+                    }
+                }
+
+                console.log('new-messages', new_messages)
+
+                messages_items = new_messages
 
                 flagFinish = true
             
