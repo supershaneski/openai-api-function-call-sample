@@ -85,6 +85,8 @@ export async function POST(request) {
 
             if(status === 'completed') {
 
+                console.log("-messages-", messageId)
+
                 const messages = await getMessages({ threadId: thread_id })
 
                 console.log('messages-show', messages)
