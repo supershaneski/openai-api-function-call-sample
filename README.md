@@ -13,9 +13,9 @@ This application is built using manual setup of Next.js 13.
 
 このアプリケーションはNext.js 13の手動セットアップを使用して構築されています。
 
+
 **Updated**: Using [v4.18.0 OpenAI Node module](https://www.npmjs.com/package/openai)
 
----
 
 # Function Calling
 
