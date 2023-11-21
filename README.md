@@ -94,7 +94,10 @@ Do not attempt to intercept it midway. Just use the output to send the result.
 
 ## API Call Loop
 
-Here is a sample outline of how to handle function calling in Chat Completions API
+Below is a rough outline of how to handle function calling in Chat Completions API.
+
+Please note that we are adding the context to all API calls. This is very important.
+You need to add the context unless your application is just one shot function calling.
 
 ```javascript
 // prepare messages
@@ -116,35 +119,38 @@ const tools = result.message.tool_calls
 
 if(tools) {
 
-    let isCompleted = false
+  let isCompleted = false
 
-    do {
+  do {
 
-        // process the function calling
-        ...
+    // process the function calling/ call to external API
+    ...
 
-        // 2nd API call
-        const result = await openai.chat.completions.create({
-            messages,
-            tools,
-        })
+    // 2nd API call
+    const result = await openai.chat.completions.create({
+      messages,
+      tools,
+    })
 
-        if(!result.message.tool_calls) {
-            isCompleted = true
-        }
+    if(!result.message.tool_calls) {
+      isCompleted = true
+    }
 
-    } while(!isCompleted)
+  } while(!isCompleted)
 
 }
 ```
 
-So, basically, if the first call does not trigger function calling, no need to call the function loop.
-If function calling is triggered, you need to handle it in a loop.
-There is a possibility that the 2nd API call will also result to another function calling.
-The AI often times will be calling the functions on their own volition if it see fit.
-Without handling it this way, you will curtain the AIs own response.
+If the first call does not trigger function calling, no need to call the function loop.
 
-Now, in my implementation, I am calling two endpoints separately for the [1st API call](/app/chat/message/route.js) and [2nd API call](/app/chat/function/route.js). This is a not so elegant way to handle what I just layed out above. I am doing this because there are cases when in 2nd function call, content can be included in the result and I want to display it, too. If I am using streaming, this is not necessary, but alas, I do not know how to implement streaming in Next.js yet lol.
+Only when function calling is triggered, then we will handle it in a loop.
+The reason for this is there is a high possibility that the 2nd API call might still result with function calling.
+The AI often times call the functions on their own volition, if it see fit.
+So we will continue to process everything in a loop until the AI no longer calls function calling.
+Without handling it this way, you will curtail the AIs way to respond.
+Of course, it can run amok, so just in case, set a maximum loop limit before you hit the break.
+
+Now, if you look at my implementation, I am calling two endpoints separately for the [1st API call](/app/chat/message/route.js) and [2nd API call](/app/chat/function/route.js). This is a not so elegant way to handle what I just layed out above lol. I am doing this because there are cases when in 2nd function call, content (text) can be included in the result and I want to display it, too. If I am using streaming, this is not necessary, but alas, I do not know how to implement streaming in Next.js yet lol.
 
 Okay, so much for the explanations. Let's see how it all works.
 
