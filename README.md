@@ -7,7 +7,13 @@ A sample app to demonstrate [Function calling](https://platform.openai.com/docs/
 
 This application is built using manual setup of Next.js 13.
 
-* Updated: Using [v4.18.0 OpenAI Node module](https://www.npmjs.com/package/openai)
+---
+
+最新のフォーマットを使用した[Chat Completions API](https://platform.openai.com/docs/guides/text-generation/chat-completions-api)および[Assistants API](https://platform.openai.com/docs/assistants/overview)での「[function calling](https://platform.openai.com/docs/guides/function-calling)」をデモンストレーションするサンプルアプリケーション。
+
+このアプリケーションはNext.js 13の手動セットアップを使用して構築されています。
+
+**Updated**: Using [v4.18.0 OpenAI Node module](https://www.npmjs.com/package/openai)
 
 ---
 
@@ -15,14 +21,13 @@ This application is built using manual setup of Next.js 13.
 
 To make better function calling, you need to take care of 4 things:
 * system prompt
-* functions
-* function output
-* how to call the APIs
+* writing the functions
+* better handling of function output
+* API call loop
 
 ## System Prompt
 
-Although you can run function calling even without adding a system prompt, in my experience, it helps bind everything.
-It is like the icing on a cake. For this sample app, we have a simple system prompt to help guide the operation.
+Even though function calling can be executed without the addition of a system prompt, my experience suggests that it is better to have one. It is like the icing on a cake. In this sample application, we’ve included a simple system prompt to facilitate operations.
 
 ```javascript
 const system_prompt = `You are a helpful personal assistant.\n\n` +
@@ -45,10 +50,7 @@ const system_prompt = `You are a helpful personal assistant.\n\n` +
     `Today is ${today}`
 ```
 
-Here, we just listed the available tools/functions and when should they be invoked.
-Plus additional instructions how to handle some function and other general instructions.
-Since we are dealing with events, we need to append the current date.
-
+Here, we have enumerated the available tools/functions and provided guidelines on when they should be invoked. We have also included additional instructions on how to manage certain functions and other general directives. Given that we’re dealing with events, it’s necessary to append the current date.
 
 ## Functions/Tools
 
@@ -64,7 +66,14 @@ For this sample app, we have the following functions:
 To handle the output for these functions/tools, I made a mock API call handler. See [mockapi.js](/lib/mockapi.js).
 To simulate actual data, I also ***"chache"*** the result to make it appear real so that you can go back and forth and have the same result using the same parameters.
 
-Now, when you are writing your own functions, you need to make sure that the names, parameters and descriptions actually makes sense. If you show it to someone and they can understand it, that is the best. Otherwise, even the AI will not understand what you write there and it will fail to call your function or not supply values to your parameters and may even insert their own.
+Now, when you are writing your own functions, you need to make sure that the names, parameters and descriptions actually makes sense and easily understandable. 
+
+Do not use uncommon abreviations or acronyms in names and parameters, specially the function name. The function name should convey exactly what you are tring to achieve. The description should also be clear and avoid writing too long description.
+
+The parameters should also make sense in the context of the function.
+Otherwise, the AI will not know how to supply its value. Worst, the AI will probably make up its own parameter.
+
+A good rule of thumb is if a normal person can understand your function just by reading the JSON schema.
 
 
 ## Function Output
@@ -81,7 +90,7 @@ Supply a clear and concise function output and let the AI deal with whatever the
 Do not attempt to intercept it midway. Just use the output to send the result.
 
 
-## How to call the Chat Completion API
+## API Call Loop
 
 Here is a sample outline of how to handle function calling in Chat Completions API
 
